@@ -1,15 +1,53 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Analysis: {{ symbol }}</title>
+  <meta charset="UTF-8">
+  <title>Analysis for {{ symbol }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-  <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
   <h1>Analysis for {{ symbol }}</h1>
-  <!-- chart and stats will be injected here -->
-  <div id="chart"></div>
-  <div id="stats"></div>
+  <div id="chart" style="width:100%;max-width:900px;height:500px;"></div>
+
+  <script>
+    const dates   = {{ dates|tojson }};
+    const closes  = {{ closes|tojson }};
+    const vols    = {{ volumes|tojson }};
+    const ma20    = {{ ma20|tojson }};
+    const ma50    = {{ ma50|tojson }};
+
+    const traceClose = { x: dates, y: closes, mode: 'lines', name: 'Close' };
+    const traceMA20  = { x: dates, y: ma20, mode: 'lines', name: 'MA 20' };
+    const traceMA50  = { x: dates, y: ma50, mode: 'lines', name: 'MA 50' };
+    const traceVol   = {
+      x: dates, y: vols, type: 'bar', name: 'Volume',
+      yaxis: 'y2', opacity: 0.5
+    };
+
+    const layout = {
+      title: `{{ symbol }} — Price & Volume`,
+      xaxis: { rangeslider: { visible: false } },
+      yaxis: { title: 'Price (USD)' },
+      yaxis2: {
+        title: 'Volume',
+        overlaying: 'y',
+        side: 'right',
+        showgrid: false
+      }
+    };
+
+    Plotly.newPlot('chart',
+      [traceClose, traceMA20, traceMA50, traceVol],
+      layout
+    );
+  </script>
+
+  <div class="stats">
+    <p><strong>Mean Close:</strong> ${{ mean_price }}</p>
+    <p><strong>Volatility (σ):</strong> {{ volatility }}%</p>
+  </div>
+
+  <p><a href="{{ url_for('index') }}">← Back</a></p>
 </body>
 </html>

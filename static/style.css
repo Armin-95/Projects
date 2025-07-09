@@ -3,10 +3,12 @@ body {
   margin: 2em;
 }
 form {
-  margin-bottom: 1em;
+  margin-bottom: 1.5em;
 }
 #chart {
-  width: 100%;
-  max-width: 800px;
-  height: 500px;
+  margin-top: 1em;
+}
+.stats {
+  margin-top: 1em;
+  font-size: 1.1em;
 }

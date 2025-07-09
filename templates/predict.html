@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Prediction for {{ symbol }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <h1>Predicted Next Close for {{ symbol }}: ${{ prediction }}</h1>
+  <p><a href="{{ url_for('index') }}">← Back</a></p>
+</body>
+</html>

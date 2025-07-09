@@ -1,15 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Stock Analysis</title>
-  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-  <h1>Enter a Stock Symbol</h1>
-  <form action="/analyze" method="post">
-    <input type="text" name="symbol" placeholder="e.g. AAPL" required />
+  <h1>Stock Analysis</h1>
+  <form action="{{ url_for('analyze') }}" method="post">
+    <label for="symbol">Ticker Symbol:</label>
+    <input type="text" id="symbol" name="symbol" required>
     <button type="submit">Analyze</button>
+  </form>
+
+  <h2>ML Prediction</h2>
+  <form action="{{ url_for('predict') }}" method="post">
+    <label for="symbol">Ticker Symbol:</label>
+    <input type="text" id="symbol" name="symbol" required>
+    <button type="submit">Predict Next Close</button>
   </form>
 </body>
 </html>
