@@ -1,16 +1,18 @@
-# Ignore Python virtual environments
-venv/
-
-# Ignore Python cache files
+# Byte-compiled / optimized / DLL files
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
 
-# Ignore environment/config files
+# Virtual environment
+venv/
 .env
 
-# Ignore VS Code settings (optional)
+# IDEs and editors
 .vscode/
+.idea/
 
-# Ignore OS-specific files
+# OS files
 .DS_Store
-Thumbs.db
+
+# Logs
+*.log

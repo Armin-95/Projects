@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Stock Analysis</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <h1>Enter a Stock Symbol</h1>
+  <form action="/analyze" method="post">
+    <input type="text" name="symbol" placeholder="e.g. AAPL" required />
+    <button type="submit">Analyze</button>
+  </form>
+</body>
+</html>
