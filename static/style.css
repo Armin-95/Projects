@@ -1,14 +1,37 @@
 body {
+  margin: 0;
   font-family: Arial, sans-serif;
-  margin: 2em;
+  background: linear-gradient(135deg, #5b2c83, #0a2e69);
+  color: #fff;
 }
-form {
-  margin-bottom: 1.5em;
+
+header {
+  text-align: center;
+  padding: 20px;
 }
-#chart {
-  margin-top: 1em;
+
+.stocks {
+  max-width: 900px;
+  margin: 0 auto;
 }
-.stats {
-  margin-top: 1em;
-  font-size: 1.1em;
+
+.articles {
+  max-width: 900px;
+  margin: 40px auto;
+}
+
+.articles h2 {
+  margin-bottom: 20px;
+}
+
+.articles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.article-card {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 16px;
 }

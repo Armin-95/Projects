@@ -1,23 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Stock Analysis</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <meta charset="UTF-8" />
+  <title>StockScopeAI</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <h1>Stock Analysis</h1>
-  <form action="{{ url_for('analyze') }}" method="post">
-    <label for="symbol">Ticker Symbol:</label>
-    <input type="text" id="symbol" name="symbol" required>
-    <button type="submit">Analyze</button>
-  </form>
+  <header>
+    <h1>StockScopeAI</h1>
+  </header>
 
-  <h2>ML Prediction</h2>
-  <form action="{{ url_for('predict') }}" method="post">
-    <label for="symbol">Ticker Symbol:</label>
-    <input type="text" id="symbol" name="symbol" required>
-    <button type="submit">Predict Next Close</button>
-  </form>
+  <section class="stocks">
+    <canvas id="stocksChart"></canvas>
+  </section>
+
+  <section class="articles">
+    <h2>Latest Market News</h2>
+    <div class="articles-grid" id="articlesGrid">
+      <!-- Articles appended via JavaScript -->
+    </div>
+  </section>
+
+  <script src="script.js"></script>
 </body>
 </html>
