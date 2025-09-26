@@ -2,11 +2,88 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Prediction for {{ symbol }}</title>
+  <title>Stock Prediction Result</title>
+  <link href="https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <h1>Predicted Next Close for {{ symbol }}: ${{ prediction }}</h1>
-  <p><a href="{{ url_for('index') }}">← Back</a></p>
+  <h1>Stock Analysis Dashboard: <strong>{{ symbol }}</strong></h1>
+  <form action="{{ url_for('predict') }}" method="post">
+    <label for="symbol">Select Stock:</label>
+    <select id="symbol" name="symbol" required>
+      <option value="AAPL" {% if symbol == 'AAPL' %}selected{% endif %}>AAPL</option>
+      <option value="MSFT" {% if symbol == 'MSFT' %}selected{% endif %}>MSFT</option>
+      <option value="GOOGL" {% if symbol == 'GOOGL' %}selected{% endif %}>GOOGL</option>
+      <option value="AMZN" {% if symbol == 'AMZN' %}selected{% endif %}>AMZN</option>
+      <option value="TSLA" {% if symbol == 'TSLA' %}selected{% endif %}>TSLA</option>
+      <option value="META" {% if symbol == 'META' %}selected{% endif %}>META</option>
+    </select>
+    <button type="submit">Predict</button>
+  </form>
+  <div class="stocks-grid">
+    <div class="stock-card-predict">
+      <h3 class="ml-model">Machine Learning model</h3>
+      <div style="font-size:1.0rem; color:#0beaf5; margin: 18px 0;">
+        XGBoost (eXtreme Gradient Boosting) <span style="font-family: 'Roboto Mono', monospace;"></span>
+      </div>
+      <div style="font-size:1.3rem; color:#00e676; margin: 18px 0;">
+        Predicted Next Close: <span style="font-family: 'Roboto Mono', monospace;">${{ prediction|round(4) }}</span>
+      </div>
+      <canvas id="predict-chart" width="500" height="300"></canvas>
+    </div>
+  </div>
+  <script>
+  const chartTimes = {{ times|tojson }};
+  const chartPrices = {{ prices|tojson }};
+  const lastIdx = chartPrices.length - 1;
+  const symbol = '{{ symbol }}';
+  const dataColors = chartPrices.map((v, i) => i === lastIdx ? '#ff1744' : '#00e676');
+  const pointRadius = chartPrices.map((v, i) => i === lastIdx ? 6 : 2);
+
+  const ctx = document.getElementById('predict-chart').getContext('2d');
+  new Chart(ctx,  {
+    type: 'line',
+    data: {
+      labels: chartTimes,
+      datasets: [{
+        label: symbol,
+        data: chartPrices,
+        borderColor: '#00e676',
+        backgroundColor: 'rgba(0,230,118,0.08)',
+        borderWidth: 2.5,
+        fill: true,
+        tension: 0.25,
+        pointBackgroundColor: dataColors,
+        pointBorderColor: dataColors,
+        pointRadius: pointRadius,
+        pointHoverRadius: pointRadius
+      }]
+    },
+    options: {
+      responsive: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              const idx = context.dataIndex;
+              const value = Number(context.parsed.y).toFixed(4);
+              if (idx === lastIdx) {
+                return `${symbol}:prediction = $ ${value}`;
+              } else {
+                return `${symbol}: $ ${value}`;
+              }
+            }
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: '#bdbdbd' }, grid: { color: '#23293a' } },
+        y: { ticks: { color: '#bdbdbd' }, grid: { color: '#23293a' } }
+      }
+    }
+  });
+  </script>
 </body>
 </html>

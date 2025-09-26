@@ -8,9 +8,10 @@
 </head>
 <body>
   <h1>Analysis for {{ symbol }}</h1>
-  <div id="chart" style="width:100%;max-width:900px;height:500px;"></div>
+  <div id="chart" style="width:100%;max-width:900px;height:500px;margin:auto;"></div>
 
   <script>
+  (function() {
     const dates   = {{ dates|tojson }};
     const closes  = {{ closes|tojson }};
     const vols    = {{ volumes|tojson }};
@@ -22,11 +23,21 @@
     const traceMA50  = { x: dates, y: ma50, mode: 'lines', name: 'MA 50' };
     const traceVol   = {
       x: dates, y: vols, type: 'bar', name: 'Volume',
-      yaxis: 'y2', opacity: 0.5
+      yaxis: 'y2', opacity: 0.5,
     };
 
     const layout = {
-      title: `{{ symbol }} — Price & Volume`,
+      title: {
+        text: `{{ symbol }} — Price & Volume`,
+        font: {
+          size: 30,                       //  bigger font
+          family: 'Roboto, Arial, sans-serif',
+          color: '#000000'                // matches your dark theme
+        },
+        xref: 'paper',
+        x: 0.5,                           // center title horizontally
+        xanchor: 'center'
+      },
       xaxis: { rangeslider: { visible: false } },
       yaxis: { title: 'Price (USD)' },
       yaxis2: {
@@ -34,18 +45,29 @@
         overlaying: 'y',
         side: 'right',
         showgrid: false
-      }
+      },
+      legend: {
+        orientation: 'h',                 // horizontal legend
+        x: 0.5,                           // center horizontally
+        y: 1,                          // 👈 push higher above chart
+        xanchor: 'center',
+        yanchor: 'bottom',
+        bgcolor: 'rgba(0,0,0,0)',         // transparent
+        bordercolor: 'rgba(0,0,0,0)'
+      },
+      //margin: { t: 100 }                  // extra top margin so title + legend fit
     };
+  
 
-    Plotly.newPlot('chart',
-      [traceClose, traceMA20, traceMA50, traceVol],
-      layout
-    );
+    Plotly.newPlot('chart', [traceClose, traceMA20, traceMA50, traceVol], layout);
+  })();
   </script>
 
-  <div class="stats">
-    <p><strong>Mean Close:</strong> ${{ mean_price }}</p>
-    <p><strong>Volatility (σ):</strong> {{ volatility }}%</p>
+  <div class="stats-analysis">
+    <p><strong>1 year Mean Close:</strong> $ {{ mean_price }} </p>
+    <p><strong>Month Mean Close:</strong> $ {{ mean_price_month }}</p>
+    <p><strong>1 year Volatility (σ):</strong> {{ volatility }}%</p>
+    <p><strong>Month Volatility (σ):</strong> {{ volatility_month }}%</p>
   </div>
 
   <p><a href="{{ url_for('index') }}">← Back</a></p>

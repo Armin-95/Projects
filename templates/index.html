@@ -3,21 +3,151 @@
 <head>
   <meta charset="UTF-8">
   <title>Stock Analysis</title>
+  <link href="https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <h1>Stock Analysis</h1>
+
+  <h1>Stock Analysis Dashboard</h1>
+
   <form action="{{ url_for('analyze') }}" method="post">
-    <label for="symbol">Ticker Symbol:</label>
-    <input type="text" id="symbol" name="symbol" required>
+    <label for="symbol">Analyze a Stock:</label>
+    <input type="text" id="symbol" name="symbol" placeholder="e.g. TSLA" required>
     <button type="submit">Analyze</button>
   </form>
 
-  <h2>ML Prediction</h2>
   <form action="{{ url_for('predict') }}" method="post">
-    <label for="symbol">Ticker Symbol:</label>
-    <input type="text" id="symbol" name="symbol" required>
-    <button type="submit">Predict Next Close</button>
+    <label for="symbol">ML Prediction (Next Close):</label>
+    <select id="symbol" name="symbol" required>
+      <option value="AAPL">AAPL</option>
+      <option value="MSFT">MSFT</option>
+      <option value="GOOGL">GOOGL</option>
+      <option value="AMZN">AMZN</option>
+      <option value="TSLA">TSLA</option>
+      <option value="META">META</option>
+    </select>
+    <button type="submit">Predict</button>
   </form>
+
+  <h2>Live Tracking: Top 6 US Stocks (24h)</h2>
+  <div class="stocks-grid">
+    <div class="stock-card">
+      <h3 id="stock1-name">AAPL</h3>
+      <canvas id="stock1-chart" width="300" height="180"></canvas>
+    </div>
+    <div class="stock-card">
+      <h3 id="stock2-name">MSFT</h3>
+      <canvas id="stock2-chart" width="300" height="180"></canvas>
+    </div>
+    <div class="stock-card">
+      <h3 id="stock3-name">GOOGL</h3>
+      <canvas id="stock3-chart" width="300" height="180"></canvas>
+    </div>
+    <div class="stock-card">
+      <h3 id="stock4-name">AMZN</h3>
+      <canvas id="stock4-chart" width="300" height="180"></canvas>
+    </div>
+    <div class="stock-card">
+      <h3 id="stock5-name">TSLA</h3>
+      <canvas id="stock5-chart" width="300" height="180"></canvas>
+    </div>
+    <div class="stock-card">
+      <h3 id="stock6-name">META</h3>
+      <canvas id="stock6-chart" width="300" height="180"></canvas>
+    </div>
+  </div>
+
+  <script>
+const stockSymbols = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'META'];
+
+const chartConfigs = stockSymbols.map((symbol, idx) => ({
+  ctx: document.getElementById(`stock${idx+1}-chart`).getContext('2d'),
+  chart: null,
+  symbol: symbol
+}));
+
+function fetchStockData(symbol) {
+  return fetch(`/api/stock_data?symbol=${symbol}`)
+    .then(res => res.json());
+}
+
+function updateCharts() {
+  chartConfigs.forEach((config, idx) => {
+    fetchStockData(config.symbol).then(data => {
+      // data should be { times: [...], prices: [...] }
+      if (!config.chart) {
+        config.chart = new Chart(config.ctx, {
+          type: 'line',
+          data: {
+            labels: data.times,
+            datasets: [{
+              label: config.symbol,
+              data: data.prices,
+              borderColor: '#00e676',
+              backgroundColor: 'rgba(0,230,118,0.08)',
+              pointRadius: 0,
+              pointHoverRadius: 0,
+              borderWidth: 2.5,
+              fill: true,
+              tension: 0.25
+            }]
+          },
+          options: {
+            responsive: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                mode: 'index',
+                intersect: false,
+                backgroundColor: '#23293a',
+                titleColor: '#ffb300',
+                bodyColor: '#e0e6ed',
+                borderColor: '#00e676',
+                borderWidth: 1
+              }
+            },
+            scales: {
+              x: {
+                ticks: {
+                  color: '#bdbdbd',
+                  font: { family: 'Roboto Mono, monospace', size: 11 }
+                },
+                grid: { color: '#23293a' }
+              },
+              y: {
+                ticks: {
+                  color: '#bdbdbd',
+                  font: { family: 'Roboto Mono, monospace', size: 11 }
+                },
+                grid: { color: '#23293a' }
+              }
+            }
+          }
+        });
+      } else {
+        config.chart.data.labels = data.times;
+        config.chart.data.datasets[0].data = data.prices;
+        config.chart.update();
+      }
+      document.getElementById(`stock${idx+1}-name`).textContent = config.symbol;
+    });
+  });
+}
+
+// Initial load
+updateCharts();
+// Update every minute
+setInterval(updateCharts, 60000);
+  </script>
+
+<footer style="margin-top:40px; text-align:center;">
+  <small style="color:#888; font-size:0.85rem;">
+    “This site uses historical market data downloaded via Yahoo Finance (yfinance). The data is provided for research and educational purposes only as a personal project. It may be inaccurate, delayed, or incomplete. Do not use it for trading or investment decisions.”
+  </small>
+</footer>
 </body>
 </html>
