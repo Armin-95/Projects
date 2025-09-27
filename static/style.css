@@ -16,20 +16,26 @@ h1 {
 }
 h2 {
   color: #00e676;
-  font-size: 1.5rem;
-  margin-top: 40px;
-  margin-bottom: 16px;
+  font-size: 1.7rem;
+  margin-top: 35px;
+  margin-bottom: 65px;
   text-align: center;
   letter-spacing: 1px;
   font-weight: 700;
 }
 h3 {
   color: #ffb300;
-  font-size: 1.1rem;
-  margin-bottom: 8px;
+  font-size: 0.8rem;
+  margin-bottom: 3px;
   font-weight: 700;
   letter-spacing: 1px;
   text-align: center;
+}
+h4 {
+  color: #0beaf5;
+  font-size: 1.1rem;                         
+  margin: 18px 0;             
+  font-family: 'Roboto Mono', monospace; 
 }
 form {
   background: #23293a;
@@ -131,7 +137,7 @@ button:hover {
   display: flex;
   flex-direction: column;
   align-items: center;
-  transition: transform 0.15s;
+  transition: transform 0.25s;
 }
 .stock-card-predict {
   background: #23293a;
@@ -145,7 +151,7 @@ button:hover {
   transition: transform 0.15s;
 }
 .stock-card:hover {
-  transform: translateY(-4px) scale(1.03);
+  transform: translateY(-4px) scale(1.4);
   box-shadow: 0 6px 24px rgba(0,0,0,0.25);
 }
 canvas {
@@ -153,4 +159,13 @@ canvas {
   border-radius: 8px;
   margin-top: 8px;
   box-shadow: 0 1px 8px rgba(0,0,0,0.12);
+}
+.stock-fullname {
+  color: #ffb300;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-align: center;
+  margin-bottom: 2px;
+  font-family: 'Roboto', Arial, sans-serif;
 }
