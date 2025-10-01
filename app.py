@@ -1,12 +1,12 @@
 from flask import Flask, render_template, request, jsonify
 import yfinance as yf
-from datetime import date
+from datetime import datetime, date, time
 from collections import OrderedDict
 import joblib
 import os
 import pandas as pd  
 import numpy as np
-
+from zoneinfo import ZoneInfo
 
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
@@ -111,6 +111,13 @@ def predict():
     symbol = request.form['symbol'].upper()
     company_name = COMPANY_NAMES.get(symbol, symbol)
     df = yf.download(symbol, period="3mo", interval="1d", auto_adjust =True)
+    #get ticker time zone
+    symbol_info = yf.Ticker(symbol).info
+    zone_ticker = ZoneInfo(symbol_info.get("exchangeTimezoneName"))
+    zone_ticker_time = datetime.now(zone_ticker)
+    # If last row is today and market not yet closed (before 16:00 ET), drop it
+    if df.index[-1].date() == zone_ticker_time.date() and zone_ticker_time.time() < time(16, 0):
+        df = df.iloc[:-1]  # remove today's unfinished candle
     
     ##features for prediction
     def rsi(series: pd.Series, period: int = 14) -> pd.Series:
@@ -205,13 +212,16 @@ def predict():
 def stock_data():
     symbol = request.args.get('symbol')
     data = yf.download(symbol, period='2d', interval='5m', auto_adjust=True)
+    # time zone Convert to Central European Summer Time
+    idx = data.index
+    if idx.tz is None:
+        idx = idx.tz_localize("UTC")
+    idx = idx.tz_convert(ZoneInfo("Europe/Berlin"))
+    data = data.set_index(idx)
     close_series = data[('Close', symbol)]
     prices = close_series.ffill().values.tolist()
     times = data.index.strftime('%Y-%m-%d %H:%M').tolist()
     return jsonify({'times': times, 'prices': prices})
 
-
-
 if __name__ == '__main__':
     pass
-

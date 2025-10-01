@@ -6,6 +6,8 @@ from xgboost import XGBRegressor
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import warnings
 import joblib
+from zoneinfo import ZoneInfo
+from datetime import datetime, time
 warnings.filterwarnings("ignore")
 np.random.seed(42)
 
@@ -13,6 +15,15 @@ np.random.seed(42)
 def data_features(symbol):
 
     df = yf.download(symbol, start="2005-01-01", auto_adjust=True)    
+    #get ticker time zone
+    symbol_info = yf.Ticker(symbol).info
+    zone_ticker = ZoneInfo(symbol_info.get("exchangeTimezoneName"))
+    zone_ticker_time = datetime.now(zone_ticker)
+    # If last row is today and market not yet closed (before 16:00 ET), drop it
+    if df.index[-1].date() == zone_ticker_time.date() and zone_ticker_time.time() < time(16, 0):
+        df = df.iloc[:-1]  # remove today's unfinished candle
+
+    ##features for prediction
     def rsi(series: pd.Series, period: int = 14):
         """Wilder-style RSI with EWM smoothing."""
         delta = series.diff()
