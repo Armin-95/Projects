@@ -23,12 +23,12 @@
   <form action="{{ url_for('predict') }}" method="post">
     <label for="symbol">ML Prediction (Next Close):</label>
     <select id="symbol" name="symbol" required>
-      <option value="AAPL">AAPL</option>
-      <option value="MSFT">MSFT</option>
-      <option value="GOOGL">GOOGL</option>
-      <option value="AMZN">AMZN</option>
-      <option value="TSLA">TSLA</option>
-      <option value="META">META</option>
+      <option value="AAPL">Apple Inc.</option>
+      <option value="MSFT">Microsoft Corporation</option>
+      <option value="GOOGL">Alphabet Inc.</option>
+      <option value="AMZN">Amazon.com, Inc.</option>
+      <option value="TSLA">Tesla, Inc.</option>
+      <option value="META">Meta Platforms, Inc.</option>
     </select>
     <button type="submit">Predict</button>
   </form>

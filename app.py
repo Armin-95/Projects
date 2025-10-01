@@ -8,6 +8,7 @@ import pandas as pd
 import numpy as np
 
 
+
 app = Flask(__name__, template_folder="templates", static_folder="static")
 
 # Enable fast dev feedback
@@ -17,6 +18,15 @@ app.config["TEMPLATES_AUTO_RELOAD"] = True
 # Load ML model once at startup
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODELS_DIR = os.getenv("MODELS_DIR", os.path.join(BASE_DIR, "models"))
+
+COMPANY_NAMES = {
+    'AAPL': 'Apple Inc.',
+    'MSFT': 'Microsoft Corporation',
+    'GOOGL': 'Alphabet Inc.',
+    'AMZN': 'Amazon.com, Inc.',
+    'TSLA': 'Tesla, Inc.',
+    'META': 'Meta Platforms, Inc.'
+}
 
 # Load every .joblib in MODELS_DIR once at startup
 MODELS = {}
@@ -98,8 +108,8 @@ def analyze():
 
 @app.route('/predict', methods=['POST'])
 def predict():
-
     symbol = request.form['symbol'].upper()
+    company_name = COMPANY_NAMES.get(symbol, symbol)
     df = yf.download(symbol, period="3mo", interval="1d", auto_adjust =True)
     
     ##features for prediction
@@ -140,7 +150,7 @@ def predict():
 
     df["vol_z"] = (df["Volume",symbol] - df["vol_mean20"]) / df["vol_std20"]
 
-    # Target: next day log-return 
+    # Target: next-day close (shift -1)# --- target as log-return instead of price ---
     df["y_logret_next"] = np.log(df["Close"].shift(-1) / df["Close"])
 
     ## Features ##
@@ -170,7 +180,7 @@ def predict():
     results = {}
 
     for model_type, model in models_for_symbol.items():
-        predict_ret = float(model.predict(X_pred_data))
+        predict_ret = float(model.predict(X_pred_data)[0])
         predict_close = float(prices[-1]* np.exp(predict_ret))
 
         results[model_type] = predict_ret, predict_close
@@ -182,6 +192,7 @@ def predict():
 
     return render_template(
         'predict.html',
+        company_name=company_name,
         symbol=symbol,
         prediction=predict_close,
         times=times_with_pred,
@@ -203,3 +214,4 @@ def stock_data():
 
 if __name__ == '__main__':
     pass
+

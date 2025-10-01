@@ -8,80 +8,115 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <h1>Stock Analysis Dashboard: <strong>{{ symbol }}</strong></h1>
+  <h1>Stock Analysis Dashboard: <strong>{{ company_name }}</strong></h1>
   <form action="{{ url_for('predict') }}" method="post">
     <label for="symbol">Select Stock:</label>
     <select id="symbol" name="symbol" required>
-      <option value="AAPL" {% if symbol == 'AAPL' %}selected{% endif %}>AAPL</option>
-      <option value="MSFT" {% if symbol == 'MSFT' %}selected{% endif %}>MSFT</option>
-      <option value="GOOGL" {% if symbol == 'GOOGL' %}selected{% endif %}>GOOGL</option>
-      <option value="AMZN" {% if symbol == 'AMZN' %}selected{% endif %}>AMZN</option>
-      <option value="TSLA" {% if symbol == 'TSLA' %}selected{% endif %}>TSLA</option>
-      <option value="META" {% if symbol == 'META' %}selected{% endif %}>META</option>
+      <option value="AAPL" {% if symbol == 'AAPL' %}selected{% endif %}>Apple Inc.</option>
+      <option value="MSFT" {% if symbol == 'MSFT' %}selected{% endif %}>Microsoft Corporation</option>
+      <option value="GOOGL" {% if symbol == 'GOOGL' %}selected{% endif %}>Alphabet Inc.</option>
+      <option value="AMZN" {% if symbol == 'AMZN' %}selected{% endif %}>Amazon.com, Inc.</option>
+      <option value="TSLA" {% if symbol == 'TSLA' %}selected{% endif %}>Tesla, Inc.</option>
+      <option value="META" {% if symbol == 'META' %}selected{% endif %}>Meta Platforms, Inc.</option>
     </select>
     <button type="submit">Predict</button>
   </form>
-  <div class="stocks-grid">
-    <div class="stock-card-predict">
-      <h3 class="ml-model">Machine Learning model</h3>
-      <h4>XGBoost (eXtreme Gradient Boosting)</h4>
+  <div class="stocks-grid" style="grid-template-columns: repeat(2, 1fr); gap: 40px; justify-items: center; max-width: 1200px; margin: 40px auto;">
+    <div class="stock-card-predict" style="width: 520px; min-height: 420px; background: #23293a; border-radius: 18px; box-shadow: 0 2px 12px rgba(0,0,0,0.18); display: flex; flex-direction: column; align-items: center; padding: 32px 24px;">
+      <h3 class="ml-model" style="font-size:2rem;">Machine Learning model</h3>
+      <h4 style="font-size:1.3rem;">XGBoost (eXtreme Gradient Boosting)</h4>
       <div style="font-size:1.3rem; color:#00e676; margin: 18px 0;">
         Predicted Next Close: <span style="font-family: 'Roboto Mono', monospace;">${{ prediction|round(4) }}</span>
       </div>
       <canvas id="predict-chart" width="500" height="300"></canvas>
+      <button id="read-model-btn" style="margin-top:32px; background:#82a4e7; color:#23293a; border:none; border-radius:3px; padding:10px 22px; font-size:0.8rem; font-weight:700; cursor:pointer;">Read about model</button>
     </div>
   </div>
-  <script>
-  const chartTimes = {{ times|tojson }};
-  const chartPrices = {{ prices|tojson }};
-  const lastIdx = chartPrices.length - 1;
-  const symbol = '{{ symbol }}';
-  const dataColors = chartPrices.map((v, i) => i === lastIdx ? '#ff1744' : '#00e676');
-  const pointRadius = chartPrices.map((v, i) => i === lastIdx ? 6 : 2);
 
-  const ctx = document.getElementById('predict-chart').getContext('2d');
-  new Chart(ctx,  {
-    type: 'line',
-    data: {
-      labels: chartTimes,
-      datasets: [{
-        label: symbol,
-        data: chartPrices,
-        borderColor: '#00e676',
-        backgroundColor: 'rgba(0,230,118,0.08)',
-        borderWidth: 2.5,
-        fill: true,
-        tension: 0.25,
-        pointBackgroundColor: dataColors,
-        pointBorderColor: dataColors,
-        pointRadius: pointRadius,
-        pointHoverRadius: pointRadius
-      }]
-    },
-    options: {
-      responsive: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: function(context) {
-              const idx = context.dataIndex;
-              const value = Number(context.parsed.y).toFixed(4);
-              if (idx === lastIdx) {
-                return `${symbol}:prediction = $ ${value}`;
-              } else {
-                return `${symbol}: $ ${value}`;
+  <!-- Popup Modal -->
+  <div id="model-modal" style="display:none; position:fixed; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.45); z-index:1000; align-items:center; justify-content:center;">
+    <div style="background:#23293a; color:#e0e6ed; max-width:500px; padding:32px 28px; border-radius:16px; box-shadow:0 4px 32px rgba(0,0,0,0.25); position:relative;">
+      <span id="close-modal" style="position:absolute; right:18px; top:14px; font-size:1.7rem; cursor:pointer;">&times;</span>
+      <h4 style="font-size:1.6rem;margin-bottom:18px;">About XGBoost</h4>
+      <p style="font-size:1rem; line-height:1.6;">
+        XGBoost (Extreme Gradient Boosting) is a machine learning algorithm based on decision trees, built in a way that each new tree learns from the mistakes of the previous ones. It works by combining many weak learners (small trees) into a strong model that can capture complex patterns in data. The algorithm assigns higher weight to errors from earlier trees so that the next trees focus on correcting them, gradually improving accuracy. It also uses gradient descent to optimize predictions efficiently, making the learning process both fast and precise. XGBoost is fast, handles missing values well, and has built-in regularization to prevent overfitting. For stock prediction, it’s useful because it can process large amounts of historical data, pick up non-linear relationships, and make accurate predictions. Even with market complexity, XGBoost can still provide helpful signals. These signals come from patterns it detects in historical data.
+      </p>
+      <p style="margin-top:18px;">
+        For more details click here:
+        <a href="https://en.wikipedia.org/wiki/XGBoost" target="_blank" style="color:#00e676;">Wikipedia: XGBoost</a>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    // Chart.js code (unchanged)
+    const chartTimes = {{ times|tojson }};
+    const chartPrices = {{ prices|tojson }};
+    const lastIdx = chartPrices.length - 1;
+    const symbol = '{{ symbol }}';
+    const dataColors = chartPrices.map((v, i) => i === lastIdx ? '#ff1744' : '#00e676');
+    const pointRadius = chartPrices.map((v, i) => i === lastIdx ? 6 : 2);
+
+    const ctx = document.getElementById('predict-chart').getContext('2d');
+    new Chart(ctx,  {
+      type: 'line',
+      data: {
+        labels: chartTimes,
+        datasets: [{
+          label: symbol,
+          data: chartPrices,
+          borderColor: '#00e676',
+          backgroundColor: 'rgba(0,230,118,0.08)',
+          borderWidth: 2.5,
+          fill: true,
+          tension: 0.25,
+          pointBackgroundColor: dataColors,
+          pointBorderColor: dataColors,
+          pointRadius: pointRadius,
+          pointHoverRadius: pointRadius
+        }]
+      },
+      options: {
+        responsive: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const idx = context.dataIndex;
+                const value = Number(context.parsed.y).toFixed(4);
+                if (idx === lastIdx) {
+                  return `${symbol}:prediction = $ ${value}`;
+                } else {
+                  return `${symbol}: $ ${value}`;
+                }
               }
             }
           }
+        },
+        scales: {
+          x: { ticks: { color: '#bdbdbd' }, grid: { color: '#23293a' } },
+          y: { ticks: { color: '#bdbdbd' }, grid: { color: '#23293a' } }
         }
-      },
-      scales: {
-        x: { ticks: { color: '#bdbdbd' }, grid: { color: '#23293a' } },
-        y: { ticks: { color: '#bdbdbd' }, grid: { color: '#23293a' } }
       }
-    }
-  });
+    });
+
+    // Popup modal logic
+    document.getElementById('read-model-btn').onclick = function() {
+      document.getElementById('model-modal').style.display = 'flex';
+    };
+    document.getElementById('close-modal').onclick = function() {
+      document.getElementById('model-modal').style.display = 'none';
+    };
+    window.onclick = function(event) {
+      if (event.target == document.getElementById('model-modal')) {
+        document.getElementById('model-modal').style.display = 'none';
+      }
+    };
   </script>
+
+  <p style="text-align:center; margin-top:40px">
+    <a href="{{ url_for('index') }}" style="color:rgb(119, 119, 146); text-decoration:none;">← Back to Main Page</a>
+  </p>
 </body>
 </html>
