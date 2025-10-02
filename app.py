@@ -11,14 +11,6 @@ from zoneinfo import ZoneInfo
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 
-# Enable fast dev feedback
-app.config["DEBUG"] = True
-app.config["TEMPLATES_AUTO_RELOAD"] = True
-
-# Load ML model once at startup
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODELS_DIR = os.getenv("MODELS_DIR", os.path.join(BASE_DIR, "models"))
-
 COMPANY_NAMES = {
     'AAPL': 'Apple Inc.',
     'MSFT': 'Microsoft Corporation',
@@ -27,6 +19,10 @@ COMPANY_NAMES = {
     'TSLA': 'Tesla, Inc.',
     'META': 'Meta Platforms, Inc.'
 }
+
+# Load ML model once at startup
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODELS_DIR = os.getenv("MODELS_DIR", os.path.join(BASE_DIR, "models"))
 
 # Load every .joblib in MODELS_DIR once at startup
 MODELS = {}
@@ -39,9 +35,9 @@ for fname in os.listdir(MODELS_DIR):
 if not MODELS:
     raise RuntimeError(f"No .joblib models found in {MODELS_DIR}")
 
-# analyse stored data for 6 tickers - fetch_data   s
+# analyse stored data for 10 tickers - fetch_data   s
 CACHE = OrderedDict()
-CACHE_MAXSIZE = 6
+CACHE_MAXSIZE = 10
 
 def fetch_data(symbol: str):
     """Return 1y of data with simple daily cache refresh (max size enforced)."""
@@ -194,16 +190,16 @@ def predict():
 
 
     # Append prediction
-    prices_with_pred = prices[-29:] + [predict_close]
-    times_with_pred = times[-29:]+ [pred_time]
+    prices_last_month = prices[-30:]  
+    times_last_month = times[-30:]
 
     return render_template(
         'predict.html',
         company_name=company_name,
         symbol=symbol,
         prediction=predict_close,
-        times=times_with_pred,
-        prices=prices_with_pred,
+        times=times_last_month,
+        prices=prices_last_month,
         results=results,
 
     )
@@ -223,5 +219,6 @@ def stock_data():
     times = data.index.strftime('%Y-%m-%d %H:%M').tolist()
     return jsonify({'times': times, 'prices': prices})
 
+
 if __name__ == '__main__':
-    pass
+        pass

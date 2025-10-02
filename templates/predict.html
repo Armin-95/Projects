@@ -25,8 +25,13 @@
     <div class="stock-card-predict" style="width: 520px; min-height: 420px; background: #23293a; border-radius: 18px; box-shadow: 0 2px 12px rgba(0,0,0,0.18); display: flex; flex-direction: column; align-items: center; padding: 32px 24px;">
       <h3 class="ml-model" style="font-size:2rem;">Machine Learning model</h3>
       <h4 style="font-size:1.3rem;">XGBoost (eXtreme Gradient Boosting)</h4>
-      <div style="font-size:1.3rem; color:#00e676; margin: 18px 0;">
-        Predicted Next Close: <span style="font-family: 'Roboto Mono', monospace;">${{ prediction|round(4) }}</span>
+      <div style="margin: 18px 0;">
+        <div style="font-size:1rem; color:#00e676; margin-bottom:4px;text-align:center;">
+          Last Close: <span style="font-family: 'Roboto Mono', monospace;">${{ prices[-1]|round(4) }}</span>
+        </div>
+        <div style="font-size:1.1rem; color:#b6f6fc;">
+          Predicted Next Close: <span style="font-family: 'Roboto Mono', monospace;">${{ results["xgboost"][1]|round(4)}}</span>
+        </div>
       </div>
       <canvas id="predict-chart" width="500" height="300"></canvas>
       <button id="read-model-btn" style="margin-top:32px; background:#82a4e7; color:#23293a; border:none; border-radius:3px; padding:10px 22px; font-size:0.8rem; font-weight:700; cursor:pointer;">Read about model</button>
@@ -48,58 +53,79 @@
     </div>
   </div>
 
-  <script>
-    // Chart.js code (unchanged)
-    const chartTimes = {{ times|tojson }};
-    const chartPrices = {{ prices|tojson }};
-    const lastIdx = chartPrices.length - 1;
-    const symbol = '{{ symbol }}';
-    const dataColors = chartPrices.map((v, i) => i === lastIdx ? '#ff1744' : '#00e676');
-    const pointRadius = chartPrices.map((v, i) => i === lastIdx ? 6 : 2);
+<script>
+  // Data coming from app.py
+  const chartTimes = {{ times|tojson }};
+  const chartPrices = {{ prices|tojson }};
 
-    const ctx = document.getElementById('predict-chart').getContext('2d');
-    new Chart(ctx,  {
-      type: 'line',
-      data: {
-        labels: chartTimes,
-        datasets: [{
-          label: symbol,
-          data: chartPrices,
-          borderColor: '#00e676',
-          backgroundColor: 'rgba(0,230,118,0.08)',
-          borderWidth: 2.5,
-          fill: true,
-          tension: 0.25,
-          pointBackgroundColor: dataColors,
-          pointBorderColor: dataColors,
-          pointRadius: pointRadius,
-          pointHoverRadius: pointRadius
-        }]
-      },
-      options: {
-        responsive: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: function(context) {
-                const idx = context.dataIndex;
-                const value = Number(context.parsed.y).toFixed(4);
-                if (idx === lastIdx) {
-                  return `${symbol}:prediction = $ ${value}`;
-                } else {
-                  return `${symbol}: $ ${value}`;
-                }
+  // Read predicted close from Jinja (XGBoost)
+  const predictedClose = {{ results["xgboost"][1]|round(4) }};
+
+  // Append a label for the prediction and the predicted price
+  // (You can use 'Prediction' or pass a timestamp from Python if you prefer)
+  const timesWithPred = [...chartTimes, 'Prediction'];
+  const pricesWithPred = [...chartPrices, predictedClose];
+
+  // Recompute last index AFTER adding prediction
+  const lastIdx = pricesWithPred.length - 1;
+  const symbol = '{{ symbol }}';
+
+  // Style last point differently
+  const dataColors = pricesWithPred.map((_, i) => i === lastIdx ? '#ff1744' : '#00e676');
+  const pointRadius = pricesWithPred.map((_, i) => i === lastIdx ? 6 : 2);
+
+  const ctx = document.getElementById('predict-chart').getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: timesWithPred,
+      datasets: [{
+        label: symbol,
+        data: pricesWithPred,
+        borderColor: '#00e676',
+        backgroundColor: 'rgba(0,230,118,0.08)',
+        borderWidth: 2.5,
+        fill: true,
+        tension: 0.25,
+        pointBackgroundColor: dataColors,
+        pointBorderColor: dataColors,
+        pointRadius: pointRadius,
+        pointHoverRadius: pointRadius,
+        segment: {
+          backgroundColor: ctx => {
+            // Only fill blue between last close and prediction
+            if (ctx.p0DataIndex === pricesWithPred.length - 2 && ctx.p1DataIndex === pricesWithPred.length - 1) {
+              return 'rgba(45, 231, 247,0.3)'; // blue area
+            }
+            return 'rgba(0,230,118,0.08)'; // default green area
+          }
+        }
+      }]
+    },
+    options: {
+      responsive: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              const idx = context.dataIndex;
+              const value = Number(context.parsed.y).toFixed(4);
+              if (idx === lastIdx) {
+                return `${symbol}:prediction = $ ${value}`;
+              } else {
+                return `${symbol}: $ ${value}`;
               }
             }
           }
-        },
-        scales: {
-          x: { ticks: { color: '#bdbdbd' }, grid: { color: '#23293a' } },
-          y: { ticks: { color: '#bdbdbd' }, grid: { color: '#23293a' } }
         }
+      },
+      scales: {
+        x: { ticks: { color: '#bdbdbd' }, grid: { color: '#23293a' } },
+        y: { ticks: { color: '#bdbdbd' }, grid: { color: '#23293a' } }
       }
-    });
+    }
+  });
 
     // Popup modal logic
     document.getElementById('read-model-btn').onclick = function() {
