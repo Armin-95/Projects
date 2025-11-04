@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, jsonify
 import yfinance as yf
 from datetime import datetime, date, time
 from collections import OrderedDict
+from functools import lru_cache
 import joblib
 import os
 import pandas as pd  
@@ -9,7 +10,13 @@ import numpy as np
 from zoneinfo import ZoneInfo
 
 
+
+
 app = Flask(__name__, template_folder="templates", static_folder="static")
+
+# Enable fast dev feedback
+app.config["DEBUG"] = True
+app.config["TEMPLATES_AUTO_RELOAD"] = True
 
 COMPANY_NAMES = {
     'AAPL': 'Apple Inc.',
@@ -35,7 +42,7 @@ for fname in os.listdir(MODELS_DIR):
 if not MODELS:
     raise RuntimeError(f"No .joblib models found in {MODELS_DIR}")
 
-# analyse stored data for 10 tickers - fetch_data   s
+# analyse stored data for 10 tickers - fetch_data   
 CACHE = OrderedDict()
 CACHE_MAXSIZE = 10
 
@@ -49,7 +56,7 @@ def fetch_data(symbol: str):
         raise RuntimeError(f"No data for {symbol}")
     latest_closed = recent.index[-1].date()
 
-    # If cached and fresh, reuse
+    # If cached and fresh, Reuse
     if symbol in CACHE:
         df, last_date = CACHE[symbol]
         if last_date == latest_closed:
@@ -220,5 +227,6 @@ def stock_data():
     return jsonify({'times': times, 'prices': prices})
 
 
+
 if __name__ == '__main__':
-        pass
+    pass
