@@ -3,10 +3,10 @@ import os
 import psycopg2
 from psycopg2.extras import execute_values
 import pandas as pd
-from dotenv import load_dotenv #test env
+#from dotenv import load_dotenv #test env
 
 
-load_dotenv()  # Load environment variables from .env file #test env
+#load_dotenv()  # Load environment variables from .env file #test env
 DATABASE_URL = os.getenv("DATABASE_URL") 
 if not DATABASE_URL:
     raise RuntimeError("Set DATABASE_URL")
