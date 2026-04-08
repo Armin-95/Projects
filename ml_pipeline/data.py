@@ -23,6 +23,26 @@ def get_prices(symbol: str, start: str = "2005-01-01", auto_adjust: bool = True)
     # drop today's incomplete bar before close )
     if not df.empty and df.index[-1].date() == now_local.date() and now_local.time() < dt_time(16, 0):
         df = df.iloc[:-1]
+
+    #multiIndex check 
+    is_multi = isinstance(df.columns, pd.MultiIndex) 
+    cols = (df.columns.get_level_values(0) #multiIndex fix 
+            if is_multi
+            else df.columns)
+    
+    df = (
+        df
+        .rename_axis(index="trading_date")
+        .set_axis(cols.str.lower(), axis=1)
+        .assign(symbol=symbol)   
+        .reset_index()
+        .assign(
+                trading_date=lambda x: x["trading_date"].dt.date,
+                volume=lambda x: pd.to_numeric(x["volume"], errors="coerce"),
+                )
+        [["symbol", "trading_date", "open", "high", "low", "close", "volume"]]
+        )
+    
     return df
 
 def time_series_split(X: pd.DataFrame, y: pd.Series, val_frac: float = 0.2):
@@ -31,8 +51,6 @@ def time_series_split(X: pd.DataFrame, y: pd.Series, val_frac: float = 0.2):
         raise ValueError("Empty dataset.")
     if len(y) != n:
         raise ValueError("X and y length mismatch.")
-    #pred_size = 1  #train_TEST.py
     split = int(n * (1 - val_frac))
-    #split = int(n * (1 - val_frac)-pred_size) #train_TEST.py
 
-    return X.iloc[:split], y.iloc[:split], X.iloc[split:], y.iloc[split:] #, X.iloc[-pred_size:], y.iloc[-pred_size:] #train_TEST.py
+    return X.iloc[:split], y.iloc[:split], X.iloc[split:], y.iloc[split:]

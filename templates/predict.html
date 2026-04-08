@@ -26,12 +26,15 @@
       <h3 class="ml-model" style="font-size:2rem;">Machine Learning model</h3>
       <h4 style="font-size:1.3rem;">XGBoost (eXtreme Gradient Boosting)</h4>
       <div style="margin: 18px 0;">
-        <div style="font-size:1rem; color:#00e676; margin-bottom:4px;text-align:center;">
-          Last Close: <span style="font-family: 'Roboto Mono', monospace;">${{ prices[-1]|round(4) }}</span>
+        <div style="font-size:1rem; color:#00e676; margin-bottom:14px;text-align:center;">
+          Last Close: <span style="font-family: 'Roboto Mono', monospace;">${{ prices[-1]|round(4) }}  Date:{{times[-1] }}</span>
         </div>
-        <div style="font-size:1.1rem; color:#b6f6fc;">
+        <div style="font-size:1.2rem; color:#b6f6fc;">
           Predicted Next Close: <span style="font-family: 'Roboto Mono', monospace;">${{ results["xgboost"][1]|round(4)}}</span>
         </div>
+        <div style="font-size:1.1rem; color:#b6f6fc; text-align:center;">
+          Predicted Next Return: <span style="font-family: 'Roboto Mono', monospace;">{{ (results["xgboost"][0]*100)|round(4) }}%</span>
+        </div>  
       </div>
       <canvas id="predict-chart" width="500" height="300"></canvas>
       <button id="read-model-btn" style="margin-top:32px; background:#82a4e7; color:#23293a; border:none; border-radius:3px; padding:10px 22px; font-size:0.8rem; font-weight:700; cursor:pointer;">Read about model</button>

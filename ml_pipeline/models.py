@@ -12,23 +12,28 @@ class XGBModel:
         if XGBRegressor is None:
             raise ImportError("xgboost not installed. `pip install xgboost`")
         default = dict(
-            n_estimators=1000,
+            n_estimators=2000,
             learning_rate=0.03,
-            max_depth=6,
+            max_depth=3,
             subsample=0.8,
             colsample_bytree=0.8,
-            reg_lambda=1.0,
-            reg_alpha=0.0,
+            reg_lambda=3.0,
+            reg_alpha=0.3,
             objective="reg:squarederror",
             eval_metric="rmse",
             random_state=42,
-            early_stopping_rounds =200,
+            early_stopping_rounds =30
         )
         default.update(params or {})
         self.model = XGBRegressor(**default)
 
     def fit(self, X_tr, y_tr, X_val, y_val):
-        self.model.fit(X_tr, y_tr, eval_set=[(X_val, y_val)])
+        self.model.fit(X_tr, 
+                       y_tr, 
+                       eval_set=[(X_val, y_val)],
+                       #early_stopping_rounds=20,
+                        verbose=True
+                       )
         return self
 
     def predict(self, X):

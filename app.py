@@ -1,22 +1,16 @@
 from flask import Flask, render_template, request, jsonify
 import yfinance as yf
-from datetime import datetime, date, time
 from collections import OrderedDict
-from functools import lru_cache
 import joblib
 import os
 import pandas as pd  
 import numpy as np
-from zoneinfo import ZoneInfo
-
-
+from database.db import  get_prediction_daily_bars
+from ml_pipeline.market_data import sync_prediction_daily_data
+from ml_pipeline.features import build_features
 
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
-
-# Enable fast dev feedback
-app.config["DEBUG"] = True
-app.config["TEMPLATES_AUTO_RELOAD"] = True
 
 COMPANY_NAMES = {
     'AAPL': 'Apple Inc.',
@@ -30,6 +24,9 @@ COMPANY_NAMES = {
 # Load ML model once at startup
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODELS_DIR = os.getenv("MODELS_DIR", os.path.join(BASE_DIR, "models"))
+#check if MODELS_DIR exists
+if not os.path.isdir(MODELS_DIR):
+    raise RuntimeError(f"Models directory does not exist: {MODELS_DIR}")
 
 # Load every .joblib in MODELS_DIR once at startup
 MODELS = {}
@@ -42,7 +39,7 @@ for fname in os.listdir(MODELS_DIR):
 if not MODELS:
     raise RuntimeError(f"No .joblib models found in {MODELS_DIR}")
 
-# analyse stored data for 10 tickers - fetch_data   
+# analyse stored data for 10 tickers - fetch_data   s
 CACHE = OrderedDict()
 CACHE_MAXSIZE = 10
 
@@ -56,7 +53,7 @@ def fetch_data(symbol: str):
         raise RuntimeError(f"No data for {symbol}")
     latest_closed = recent.index[-1].date()
 
-    # If cached and fresh, Reuse
+    # If cached and fresh, reuse
     if symbol in CACHE:
         df, last_date = CACHE[symbol]
         if last_date == latest_closed:
@@ -96,7 +93,7 @@ def analyze():
     ma50 = df['MA50'].fillna(method='bfill').tolist()
 
     mean_price = round(df['Close',symbol].mean(), 2)
-    mean_price_month = round(df['Close',symbol].tail(30).mean(), 2)
+    mean_price_month = round(df['Close',symbol].tail(30).mean(), 2)                                                                                                                                                                                                                                                                                                                                                                                     
     volatility = round(df['Close',symbol].pct_change().std() * 100, 2)
     volatility_month = round(df['Close',symbol].tail(30).pct_change().std() * 100, 2)
 
@@ -113,80 +110,27 @@ def analyze():
 def predict():
     symbol = request.form['symbol'].upper()
     company_name = COMPANY_NAMES.get(symbol, symbol)
-    df = yf.download(symbol, period="3mo", interval="1d", auto_adjust =True)
-    #get ticker time zone
-    symbol_info = yf.Ticker(symbol).info
-    zone_ticker = ZoneInfo(symbol_info.get("exchangeTimezoneName"))
-    zone_ticker_time = datetime.now(zone_ticker)
-    # If last row is today and market not yet closed (before 16:00 ET), drop it
-    if df.index[-1].date() == zone_ticker_time.date() and zone_ticker_time.time() < time(16, 0):
-        df = df.iloc[:-1]  # remove today's unfinished candle
+
+    #check and if needed sync data for prediction (checks/populates: stock_daily_bars_prediction, market_calendar tables in db)
+    sync_prediction_daily_data(symbol)
+
+    # get data from DB after is up to date, then do feature engineering and model prediction
+    df = get_prediction_daily_bars(symbol)
     
-    ##features for prediction
-    def rsi(series: pd.Series, period: int = 14) -> pd.Series:
-        """Wilder-style RSI with EWM smoothing."""
-        delta = series.diff()
-        gain = delta.clip(lower=0)
-        loss = -delta.clip(upper=0)
-        avg_gain = gain.ewm(alpha=1/period, adjust=False, min_periods=period).mean()
-        avg_loss = loss.ewm(alpha=1/period, adjust=False, min_periods=period).mean()
-        rs = avg_gain / avg_loss
-        rsi = 100 - (100 / (1 + rs))
-        return rsi
-    
-    df["ret1"] = df["Close"].pct_change()
-
-    # RSI(14)
-    df["RSI14"] = rsi(df["Close"], 14)
-
-    # Trading day type 1..5 (Mon=1, Fri=5)
-    df["day_type"] = df.index.dayofweek + 1  # Monday=0 => 1 .. Friday=4 => 5
-
-    # SMA ratio: (SMA5 / SMA20) - 1  (a momentum/mean-reversion signal)
-    df["SMA5"] = df["Close"].rolling(5).mean()
-    df["SMA20"] = df["Close"].rolling(20).mean()
-    df["sma5_20_ratio"] = df["SMA5"] / df["SMA20"] - 1
-
-    # 20-day volatility (std of daily returns)
-    df["vol20"] = df["ret1"].rolling(20).std()
-
-
-    # Intraday range percentage
-    df["range_pct"] = (df["High"] - df["Low"]) / df["Close"]
-
-    # Volume z-score (20d)
-    df["vol_mean20"] = df["Volume"].rolling(20).mean()
-    df["vol_std20"] = df["Volume"].rolling(20).std()
-
-    df["vol_z"] = (df["Volume",symbol] - df["vol_mean20"]) / df["vol_std20"]
-
-    # Target: next-day close (shift -1)# --- target as log-return instead of price ---
-    df["y_logret_next"] = np.log(df["Close"].shift(-1) / df["Close"])
-
-    ## Features ##
-    feature_cols = [
-        "RSI14",
-        "day_type",
-        "sma5_20_ratio",
-        "vol20",
-        "range_pct",
-        "vol_z"
-        # + new others features 
-    ]
+    #features for prediction
+    df_features, feature_cols = build_features(df,symbol)
 
     ## model select and model prediction
-
     #data for predict.html page
-    prices = df['Close',symbol].ffill().values.tolist()
-    times = df.index.strftime('%Y-%m-%d').tolist()
-    pred_time = 'Prediction'
+    prices = df_features['close'].ffill().values.tolist()
+    times = pd.to_datetime(df_features["trading_date"]).dt.strftime('%Y-%m-%d').tolist()    
 
     # get all models for this ticker
     models_for_symbol = MODELS.get(symbol, {})
     if not models_for_symbol:
         return f"No models for {symbol}. Available tickers: {list(MODELS.keys())}", 400
 
-    X_pred_data = df[feature_cols].tail(1)
+    X_pred_data = df_features[feature_cols].tail(1)
     results = {}
 
     for model_type, model in models_for_symbol.items():
@@ -204,7 +148,6 @@ def predict():
         'predict.html',
         company_name=company_name,
         symbol=symbol,
-        prediction=predict_close,
         times=times_last_month,
         prices=prices_last_month,
         results=results,
@@ -214,18 +157,27 @@ def predict():
 @app.route('/api/stock_data')
 def stock_data():
     symbol = request.args.get('symbol')
-    data = yf.download(symbol, period='2d', interval='5m', auto_adjust=True)
-    # time zone Convert to Central European Summer Time
-    idx = data.index
-    if idx.tz is None:
-        idx = idx.tz_localize("UTC")
-    idx = idx.tz_convert(ZoneInfo("Europe/Berlin"))
-    data = data.set_index(idx)
-    close_series = data[('Close', symbol)]
-    prices = close_series.ffill().values.tolist()
-    times = data.index.strftime('%Y-%m-%d %H:%M').tolist()
-    return jsonify({'times': times, 'prices': prices})
+    try:
+        data = yf.download(symbol, period='2d', interval='5m', auto_adjust=True, progress=False)
+        # time zone Convert to Central European Summer Time
+        idx = data.index
+        if idx.tz is None:
+            idx = idx.tz_localize("UTC")
 
+        # Convert to UTC (standard)
+        idx = idx.tz_convert("UTC")
+
+        data = data.set_index(idx)
+        close_series = data[('Close', symbol)]
+        prices = close_series.ffill().values.tolist()
+
+        # Send ISO format timestamps 
+        times = data.index.strftime('%Y-%m-%dT%H:%M:%SZ').tolist()
+
+        return jsonify({'times': times, 'prices': prices})
+    except Exception as e:
+        app.logger.exception("stock_data failed for %s", symbol)
+        return jsonify({'error': 'Failed to fetch stock data'}), 500
 
 
 if __name__ == '__main__':
