@@ -7,3 +7,4 @@ scikit-learn>=1.4.2     # you use train/validation split + metrics
 xgboost>=2.0.3
 joblib>=1.4.2           # model save/load
 psycopg2                #db SQL
+exchange-calendars>=3.0.0  # for trading calendar
