@@ -6,7 +6,7 @@ import pandas as pd
 #from dotenv import load_dotenv #test env
 
 
-#load_dotenv()  # Load environment variables from .env file #test env
+#load_dotenv(override=True)  # Load environment variables from .env file #test env
 DATABASE_URL = os.getenv("DATABASE_URL") 
 if not DATABASE_URL:
     raise RuntimeError("Set DATABASE_URL")
@@ -148,9 +148,9 @@ def get_latest_prediction_trading_date(symbol:str):
         return row[0] if row and row[0] else None
     
 
-def upsert_prediction_daily_bars(df: pd.DataFrame, symbol:str, start_date):
+def upsert_prediction_daily_bars(df: pd.DataFrame, symbol:str, older_25_close_date):
     # start_date is date from download window range on YF, older than start_date can be deleted from db, because they are already in db 
-    if df is None or df.empty or start_date is None:
+    if df is None or df.empty:
         return
     rows = list(df.itertuples(index=False, name=None)) # converted to tuples for ex.: ('AAPL',datetime.date(2025, 12, 18),273.35420232069225,273.374203136776,266.7004552212896,271.935546875,51630700),...
     with get_connection() as conn, conn.cursor() as cur:
@@ -177,7 +177,7 @@ def upsert_prediction_daily_bars(df: pd.DataFrame, symbol:str, start_date):
         cur.execute("""
             DELETE FROM stock_daily_bars_prediction
             WHERE symbol = %s AND trading_date < %s
-        """, (symbol, start_date))
+        """, (symbol, older_25_close_date))
         
         conn.commit()
 

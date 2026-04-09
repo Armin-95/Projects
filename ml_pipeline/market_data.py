@@ -91,8 +91,10 @@ def sync_prediction_daily_data(symbol):
             return False
 
         prepared_df = _prepare_daily_data(raw_df, symbol)
+        older_25_close_date = older_25_close_dt.date() if older_25_close_dt else None #older dates than this can be deleted from db, because the are outside of calculating features window
+
         if prepared_df is not None and not prepared_df.empty:
-            upsert_prediction_daily_bars(prepared_df, symbol, start_date)
+            upsert_prediction_daily_bars(prepared_df, symbol, older_25_close_date)
             return True
         
         return False
