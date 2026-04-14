@@ -3,10 +3,13 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 from typing import Any, Dict
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+import numpy as np
 
 from .data import get_prices, time_series_split
 from .features import build_features
 from .models import XGBModel, LSTMModel
+from database.db import insert_model_metrics
 
 # Default artifacts folder = top-level "models/"
 DEFAULT_OUTDIR = Path(__file__).resolve().parents[1] / "models"
@@ -16,7 +19,8 @@ DEFAULT_OUTDIR = Path(__file__).resolve().parents[1] / "models"
 def train_xgboost(
     symbol: str,
     outdir: Path,
-    val_frac: float = 0.2,
+    val_frac: float = 0.15,
+    test_frac: float = 0.15, 
     **model_params,
 ) -> Dict[str, Any]:
     symbol = symbol.upper()
@@ -32,17 +36,19 @@ def train_xgboost(
     X = df_features[feature_cols]
     y = df_features["y_logret_next"]
 
-    X_tr, y_tr, X_val, y_val = time_series_split(X, y, val_frac=val_frac)
+    X_tr, y_tr, X_val, y_val , X_test, y_test = time_series_split(X, y, val_frac=val_frac, test_frac=test_frac)
 
     model = XGBModel(**model_params).fit(X_tr, y_tr, X_val, y_val)
-    print(f"[INFO] Training XGBoost (final params={model.model.get_params()})")
 
+    _calculate_model_metrics(X_test, y_test, symbol, model, model_type="xgboost")
+
+    print(f"[INFO] Training XGBoost (final params={model.model.get_params()})")
 
     outdir.mkdir(parents=True, exist_ok=True)
     model_path = outdir / f"xgboost_{symbol}.joblib"
     model.save(str(model_path))
 
-    print(f"[SAVED] {model_path}")
+    print(f"[SAVED] {model_path}")  
     return {
         "symbol": symbol,
         "model": "xgboost",
@@ -58,6 +64,40 @@ def train_lstm(
 ) -> Dict[str, Any]:
     symbol = symbol.upper()
     raise NotImplementedError("LSTM training isn't implemented yet.")
+
+def _calculate_model_metrics(X_test, y_test,symbol, model, model_type):
+    ## model quality check on test set 
+    #clarify the variable values 
+    y_test_logret = y_test 
+    y_test_pred_logret =model.predict(X_test)
+
+    # model metrics on predicted target (log returns)
+    mae = mean_absolute_error(y_test_logret, y_test_pred_logret)
+    rmse = np.sqrt(mean_squared_error(y_test_logret, y_test_pred_logret)) #sensitive for higher errors(outliers), than MAE
+    hit_ratio = (np.sign(y_test_pred_logret) == np.sign(y_test_logret)).mean() #movement of prediction positive/negative same as actual movement of returns
+    corrcoef = np.corrcoef(y_test_pred_logret, y_test_logret)[0,1] #does my model catches how well y_test_pred_logret co-move with actual returns-y_test_logret ( direction + magnitude) 
+
+    # model quality based on trading evaluation in simple returns (sr)
+    signal = np.sign(y_test_pred_logret)
+    y_test_sr= np.exp(y_test_logret) - 1
+
+    strategy_ret = signal * y_test_sr   #trading based on the predictions (long if predicted return positive, short if predicted return negative of NEXT CLOSE) :short/long at the time of CLOSE !
+    strategy_mean = strategy_ret.mean() #average return of the strategy per trade
+    strategy_std =strategy_ret.std()#volatility of the strategy returns
+    sharpe = strategy_mean / strategy_std if strategy_std != 0 else np.nan #risk-adjusted performance, for one unit of risk (std) how much return I get on average (mean), higher -better avg returs per risk unit
+    
+    max_loss = strategy_ret.min() #max loss per day trade
+    cumulative_growth  = (1 + strategy_ret).cumprod() # cumulative return as Series of the strategy over time (as a total growth) 
+    total_return = cumulative_growth.iloc[-1] - 1 if not cumulative_growth.empty else np.nan # cumulative return of the strategy over time 
+
+    max_loss = strategy_ret.min() #max loss per day trade
+    running_max= cumulative_growth.cummax() #running max of the cumulative return over time
+    drawdown = (cumulative_growth - running_max) / running_max
+    max_drawdown = drawdown.min()
+
+    #inserting model metrics to DB
+    insert_model_metrics(symbol, model_type, mae, rmse, hit_ratio, corrcoef, strategy_mean,
+                         strategy_std, sharpe, total_return, max_loss, max_drawdown)
 
 
 # -------- CLI (single run) --------

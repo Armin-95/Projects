@@ -37,7 +37,57 @@
         </div>  
       </div>
       <canvas id="predict-chart" width="500" height="300"></canvas>
-      <button id="read-model-btn" style="margin-top:32px; background:#82a4e7; color:#23293a; border:none; border-radius:3px; padding:10px 22px; font-size:0.8rem; font-weight:700; cursor:pointer;">Read about model</button>
+      <div style="display:flex; gap:12px; margin-top:32px; flex-wrap:wrap; justify-content:center;">
+        <button id="read-model-btn" style="background:#82a4e7; color:#23293a; border:none; border-radius:3px; padding:10px 22px; font-size:0.8rem; font-weight:700; cursor:pointer;">Read about model</button>
+        <button id="metrics-btn" style="background:#00e676; color:#23293a; border:none; border-radius:3px; padding:10px 22px; font-size:0.8rem; font-weight:700; cursor:pointer;">Show model metrics</button>
+      </div>
+      
+      <!-- Model Metrics Section (Hidden by default) -->
+      <div id="metrics-section" style="display:none; margin-top:24px; padding-top:24px; border-top:1px solid #3d4556; width:100%;">
+        <!-- Model Quality Metrics -->
+        <div style="margin-bottom:24px;">
+          <h5 style="font-size:1.1rem; color:#00e676; margin-bottom:14px; text-transform:uppercase; letter-spacing:0.5px;">Model Metrics Quality</h5>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:0.95rem; color:#b6f6fc;">
+            <div style="padding:8px; background:rgba(0,230,118,0.08); border-radius:4px;">
+              <span style="color:#a0a0b0;">MAE:</span> <span style="font-family:'Roboto Mono',monospace; font-weight:600;">{% if model_metrics and model_metrics.get("xgboost") %}{{ (model_metrics["xgboost"]["model_metrics_quality"]["mae"]|float)|round(6) }}{% else %}N/A{% endif %}</span>
+            </div>
+            <div style="padding:8px; background:rgba(0,230,118,0.08); border-radius:4px;">
+              <span style="color:#a0a0b0;">RMSE:</span> <span style="font-family:'Roboto Mono',monospace; font-weight:600;">{% if model_metrics and model_metrics.get("xgboost") %}{{ (model_metrics["xgboost"]["model_metrics_quality"]["rmse"]|float)|round(6) }}{% else %}N/A{% endif %}</span>
+            </div>
+            <div style="padding:8px; background:rgba(0,230,118,0.08); border-radius:4px;">
+              <span style="color:#a0a0b0;">Hit Ratio:</span> <span style="font-family:'Roboto Mono',monospace; font-weight:600;">{% if model_metrics and model_metrics.get("xgboost") %}{{ (model_metrics["xgboost"]["model_metrics_quality"]["hit_ratio"]|float)|round(4) }}{% else %}N/A{% endif %}</span>
+            </div>
+            <div style="padding:8px; background:rgba(0,230,118,0.08); border-radius:4px;">
+              <span style="color:#a0a0b0;">Correlation:</span> <span style="font-family:'Roboto Mono',monospace; font-weight:600;">{% if model_metrics and model_metrics.get("xgboost") %}{{ (model_metrics["xgboost"]["model_metrics_quality"]["corrcoef"]|float)|round(4) }}{% else %}N/A{% endif %}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Strategy Quality Metrics -->
+        <div>
+          <h5 style="font-size:1.1rem; color:#2de7f7; margin-bottom:14px; text-transform:uppercase; letter-spacing:0.5px;">Model Strategy Quality</h5>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:0.95rem; color:#b6f6fc;">
+            <div style="padding:8px; background:rgba(45,231,247,0.08); border-radius:4px;">
+              <span style="color:#a0a0b0;">Strategy Mean:</span> <span style="font-family:'Roboto Mono',monospace; font-weight:600;">{% if model_metrics and model_metrics.get("xgboost") %}{{ (model_metrics["xgboost"]["model_strategy_quality"]["strategy_mean"]|float)|round(6) }}{% else %}N/A{% endif %}</span>
+            </div>
+            <div style="padding:8px; background:rgba(45,231,247,0.08); border-radius:4px;">
+              <span style="color:#a0a0b0;">Strategy Std:</span> <span style="font-family:'Roboto Mono',monospace; font-weight:600;">{% if model_metrics and model_metrics.get("xgboost") %}{{ (model_metrics["xgboost"]["model_strategy_quality"]["strategy_std"]|float)|round(6) }}{% else %}N/A{% endif %}</span>
+            </div>
+            <div style="padding:8px; background:rgba(45,231,247,0.08); border-radius:4px;">
+              <span style="color:#a0a0b0;">Sharpe Ratio:</span> <span style="font-family:'Roboto Mono',monospace; font-weight:600;">{% if model_metrics and model_metrics.get("xgboost") and model_metrics["xgboost"]["model_strategy_quality"]["sharpe"] %}{{ (model_metrics["xgboost"]["model_strategy_quality"]["sharpe"]|float)|round(4) }}{% else %}N/A{% endif %}</span>
+            </div>
+            <div style="padding:8px; background:rgba(45,231,247,0.08); border-radius:4px;">
+              <span style="color:#a0a0b0;">Total Return:</span> <span style="font-family:'Roboto Mono',monospace; font-weight:600;">{% if model_metrics and model_metrics.get("xgboost") %}{{ (model_metrics["xgboost"]["model_strategy_quality"]["total_return"]|float * 100)|round(2) }}%{% else %}N/A{% endif %}</span>
+            </div>
+            <div style="padding:8px; background:rgba(45,231,247,0.08); border-radius:4px;">
+              <span style="color:#a0a0b0;">Max Loss:</span> <span style="font-family:'Roboto Mono',monospace; font-weight:600;">{% if model_metrics and model_metrics.get("xgboost") %}{{ (model_metrics["xgboost"]["model_strategy_quality"]["max_loss"]|float * 100)|round(2) }}%{% else %}N/A{% endif %}</span>
+            </div>
+            <div style="padding:8px; background:rgba(45,231,247,0.08); border-radius:4px;">
+              <span style="color:#a0a0b0;">Max Drawdown:</span> <span style="font-family:'Roboto Mono',monospace; font-weight:600;">{% if model_metrics and model_metrics.get("xgboost") %}{{ (model_metrics["xgboost"]["model_strategy_quality"]["max_drawdown"]|float * 100)|round(2) }}%{% else %}N/A{% endif %}</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -141,6 +191,17 @@
       if (event.target == document.getElementById('model-modal')) {
         document.getElementById('model-modal').style.display = 'none';
       }
+    };
+
+    // Show/Hide model metrics section
+    const metricsBtn = document.getElementById('metrics-btn');
+    const metricsSection = document.getElementById('metrics-section');
+    let metricsVisible = false;
+    
+    metricsBtn.onclick = function() {
+      metricsVisible = !metricsVisible;
+      metricsSection.style.display = metricsVisible ? 'block' : 'none';
+      metricsBtn.textContent = metricsVisible ? 'Hide model metrics' : 'Show model metrics';
     };
   </script>
 

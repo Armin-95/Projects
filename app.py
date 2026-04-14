@@ -5,7 +5,7 @@ import joblib
 import os
 import pandas as pd  
 import numpy as np
-from database.db import  get_prediction_daily_bars
+from database.db import  get_model_metrics, get_prediction_daily_bars
 from ml_pipeline.market_data import sync_prediction_daily_data
 from ml_pipeline.features import build_features
 
@@ -24,9 +24,6 @@ COMPANY_NAMES = {
 # Load ML model once at startup
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODELS_DIR = os.getenv("MODELS_DIR", os.path.join(BASE_DIR, "models"))
-#check if MODELS_DIR exists
-if not os.path.isdir(MODELS_DIR):
-    raise RuntimeError(f"Models directory does not exist: {MODELS_DIR}")
 
 # Load every .joblib in MODELS_DIR once at startup
 MODELS = {}
@@ -121,6 +118,7 @@ def predict():
     df_features, feature_cols = build_features(df,symbol)
 
     ## model select and model prediction
+
     #data for predict.html page
     prices = df_features['close'].ffill().values.tolist()
     times = pd.to_datetime(df_features["trading_date"]).dt.strftime('%Y-%m-%d').tolist()    
@@ -132,6 +130,7 @@ def predict():
 
     X_pred_data = df_features[feature_cols].tail(1)
     results = {}
+    model_metrics = {}
 
     for model_type, model in models_for_symbol.items():
         predict_ret = float(model.predict(X_pred_data)[0])
@@ -139,10 +138,15 @@ def predict():
 
         results[model_type] = predict_ret, predict_close
 
+        #get metrics for the last trained model of this ticker and model type (xgboost, lstm...) from DB
+        model_metrics[model_type] = get_model_metrics(symbol, model_type) #structure {"xgboost": {"model_metrics_quality": {"mae": ..., "rmse": ..., "hit_ratio": ..., "corrcoef": ...}, "model_strategy_quality": {"strategy_mean": ..., "strategy_std": ..., "sharpe": ..., "total_return": ..., "max_loss": ..., "max_drawdown": ...}}}
+
 
     # Append prediction
     prices_last_month = prices[-30:]  
     times_last_month = times[-30:]
+
+
 
     return render_template(
         'predict.html',
@@ -151,33 +155,29 @@ def predict():
         times=times_last_month,
         prices=prices_last_month,
         results=results,
+        model_metrics=model_metrics 
 
     )
 
 @app.route('/api/stock_data')
 def stock_data():
     symbol = request.args.get('symbol')
-    try:
-        data = yf.download(symbol, period='2d', interval='5m', auto_adjust=True, progress=False)
-        # time zone Convert to Central European Summer Time
-        idx = data.index
-        if idx.tz is None:
-            idx = idx.tz_localize("UTC")
+    data = yf.download(symbol, period='2d', interval='5m', auto_adjust=True)
+    # time zone Convert to Central European Summer Time
+    idx = data.index
+    if idx.tz is None:
+        idx = idx.tz_localize("UTC")
 
-        # Convert to UTC (standard)
-        idx = idx.tz_convert("UTC")
+    # Convert to UTC (standard)
+    idx = idx.tz_convert("UTC")
 
-        data = data.set_index(idx)
-        close_series = data[('Close', symbol)]
-        prices = close_series.ffill().values.tolist()
+    data = data.set_index(idx)
+    close_series = data[('Close', symbol)]
+    prices = close_series.ffill().values.tolist()
 
-        # Send ISO format timestamps 
-        times = data.index.strftime('%Y-%m-%dT%H:%M:%SZ').tolist()
-
-        return jsonify({'times': times, 'prices': prices})
-    except Exception as e:
-        app.logger.exception("stock_data failed for %s", symbol)
-        return jsonify({'error': 'Failed to fetch stock data'}), 500
+    # Send ISO format timestamps 
+    times = data.index.strftime('%Y-%m-%dT%H:%M:%SZ').tolist()
+    return jsonify({'times': times, 'prices': prices})
 
 
 if __name__ == '__main__':

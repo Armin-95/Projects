@@ -3,6 +3,7 @@ import os
 import psycopg2
 from psycopg2.extras import execute_values
 import pandas as pd
+import numpy as np
 #from dotenv import load_dotenv #test env
 
 
@@ -47,7 +48,7 @@ def init_db():
         );
         """)
 
-        # Trading calendar (authoritative open days)
+        # 3) Trading calendar (authoritative open days)
         cur.execute("""
         CREATE TABLE IF NOT EXISTS market_calendar (
             calendar_code TEXT NOT NULL,
@@ -72,6 +73,26 @@ def init_db():
             predicted_return DOUBLE PRECISION,
             time_of_prediction TIMESTAMPTZ DEFAULT NOW(),
             PRIMARY KEY (symbol, trading_date)
+        );
+        """)
+
+        # model metrics storage for monitoring and model comparison 
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS model_metrics (
+            run_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            symbol TEXT NOT NULL,
+            model_type TEXT NOT NULL,
+            time_of_training TIMESTAMPTZ DEFAULT NOW(),
+            mae DOUBLE PRECISION,
+            rmse DOUBLE PRECISION,
+            hit_ratio DOUBLE PRECISION,
+            corrcoef DOUBLE PRECISION,   
+            strategy_mean DOUBLE PRECISION,
+            strategy_std DOUBLE PRECISION,
+            sharpe DOUBLE PRECISION,
+            total_return DOUBLE PRECISION, 
+            max_loss DOUBLE PRECISION, 
+            max_drawdown DOUBLE PRECISION
         );
         """)
 
@@ -200,6 +221,44 @@ def upsert_stock_future_return_prediction(symbol: str, trading_date, predicted_r
         conn.commit()
 
 
+
+def insert_model_metrics(symbol, model_type, mae, rmse, hit_ratio, corrcoef,
+    strategy_mean, strategy_std,sharpe, total_return, max_loss, max_drawdown):
+    mae = float(mae)
+    rmse = float(rmse)
+    hit_ratio = float(hit_ratio)
+    corrcoef = float(corrcoef)
+    strategy_mean = float(strategy_mean)
+    strategy_std = float(strategy_std)
+    sharpe = float(sharpe) if not np.isnan(sharpe) else None
+    total_return = float(total_return)
+    max_loss = float(max_loss)
+    max_drawdown = float(max_drawdown)
+
+    with get_connection() as conn, conn.cursor() as cur:
+            cur.execute( """
+                INSERT INTO model_metrics (
+                        symbol,
+                        model_type,
+                        mae,
+                        rmse,
+                        hit_ratio,
+                        corrcoef,
+                        strategy_mean,
+                        strategy_std,
+                        sharpe,
+                        total_return,
+                        max_loss, 
+                        max_drawdown
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (symbol, model_type, mae, rmse, hit_ratio,
+                  corrcoef,strategy_mean, strategy_std, sharpe, total_return, max_loss, max_drawdown
+            ))
+
+            conn.commit()
+
+
 def get_prediction_daily_bars(symbol:str):
     with get_connection()as conn, conn.cursor() as cur:
         cur.execute(""" SELECT trading_date, open, high, low, close, volume
@@ -219,6 +278,43 @@ def get_prediction_daily_bars(symbol:str):
     )
 
     return df.sort_values("trading_date").reset_index(drop=True)
+
+
+def get_model_metrics(symbol, model_type):
+    with get_connection() as conn, conn.cursor() as cur:
+            cur.execute( """
+                SELECT mae, rmse, hit_ratio, corrcoef,
+                       strategy_mean, strategy_std, sharpe,
+                       total_return, max_loss, max_drawdown
+                FROM model_metrics
+                WHERE symbol = %s AND model_type = %s
+                ORDER BY time_of_training DESC
+                LIMIT 1
+            """, (symbol, model_type))
+
+            row = cur.fetchone()
+
+            if row is None:
+                return None
+
+            return {
+                "model_metrics_quality": {
+                    "mae": row[0],
+                    "rmse": row[1],
+                    "hit_ratio": row[2],
+                    "corrcoef": row[3],
+                },
+                "model_strategy_quality": {
+                    "strategy_mean": row[4],
+                    "strategy_std": row[5],
+                    "sharpe": row[6],
+                    "total_return": row[7],
+                    "max_loss": row[8],
+                    "max_drawdown": row[9],
+                }
+            }
+
+            
 
 
 

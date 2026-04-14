@@ -4,8 +4,7 @@ from typing import Any, Dict, List, Tuple
 from ml_pipeline.train import train_xgboost, train_lstm, DEFAULT_OUTDIR
 
 
-# Each item (symbol, model_name, params_dict) add custom params if needed in dict
-
+# Each item (symbol, model_name, params_dict) add custom params if needed in dictionary
 EXPERIMENTS: List[Tuple[str, str, Dict[str, Any]]] = [
     ("AAPL", "xgboost", {}),
     ("MSFT", "xgboost", {}),

@@ -45,12 +45,26 @@ def get_prices(symbol: str, start: str = "2005-01-01", auto_adjust: bool = True)
     
     return df
 
-def time_series_split(X: pd.DataFrame, y: pd.Series, val_frac: float = 0.2):
+def time_series_split(
+    X: pd.DataFrame,
+    y: pd.Series,
+    val_frac: float = 0.15,
+    test_frac: float = 0.15
+):
     n = len(X)
+
     if n == 0:
         raise ValueError("Empty dataset.")
     if len(y) != n:
         raise ValueError("X and y length mismatch.")
-    split = int(n * (1 - val_frac))
+    if val_frac + test_frac >= 1:
+        raise ValueError("val_frac + test_frac must be < 1")
 
-    return X.iloc[:split], y.iloc[:split], X.iloc[split:], y.iloc[split:]
+    val_frac_start = int(n * (1 - (val_frac + test_frac)))
+    test_frac_start = int(n * (1 - test_frac))
+
+    return (
+        X.iloc[:val_frac_start], y.iloc[:val_frac_start],
+        X.iloc[val_frac_start:test_frac_start], y.iloc[val_frac_start:test_frac_start],
+        X.iloc[test_frac_start:], y.iloc[test_frac_start:]
+    )

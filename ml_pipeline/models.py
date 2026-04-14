@@ -31,7 +31,6 @@ class XGBModel:
         self.model.fit(X_tr, 
                        y_tr, 
                        eval_set=[(X_val, y_val)],
-                       #early_stopping_rounds=20,
                         verbose=True
                        )
         return self
