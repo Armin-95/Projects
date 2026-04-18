@@ -36,7 +36,7 @@ def train_xgboost(
     X = df_features[feature_cols]
     y = df_features["y_logret_next"]
 
-    X_tr, y_tr, X_val, y_val , X_test, y_test = time_series_split(X, y, val_frac=val_frac, test_frac=test_frac)
+    X_tr, y_tr, X_val, y_val , X_test, y_test = time_series_split(X, y, val_frac=0.15, test_frac=0.15)
 
     model = XGBModel(**model_params).fit(X_tr, y_tr, X_val, y_val)
 

@@ -1,10 +1,27 @@
-flask>=3.0
-gunicorn>=21.2          # production WSGI server
-yfinance>=0.2.43        # Yahoo Finance API
-pandas>=2.2.2
-numpy>=1.26.4           # supports Python 3.12 on Render
-scikit-learn>=1.4.2     # you use train/validation split + metrics
-xgboost>=2.0.3
-joblib>=1.4.2           # model save/load
-psycopg2                #db SQL
-exchange-calendars>=3.0.0  # for trading calendar support
+Flask==3.1.1
+gunicorn==23.0.0
+yfinance==0.2.65
+
+pandas==2.3.1
+numpy==2.2.6
+scikit-learn==1.7.0
+scipy==1.15.3
+xgboost==3.0.5
+joblib==1.5.1
+
+psycopg2==2.9.11
+exchange-calendars==4.13.2
+
+#flask>=3.0
+#gunicorn>=21.2          # production WSGI server
+#yfinance>=0.2.43        # Yahoo Finance API
+#pandas>=2.2.3
+#numpy>=1.26.4           # supports Python 3.12 on Render
+#scikit-learn>=1.4.2     # you use train/validation split + metrics
+#xgboost>=2.0.3
+#joblib>=1.4.2           # model save/load
+#psycopg2                #db SQL
+#exchange-calendars>=3.0.0  # for trading calendar support
+
+
+
