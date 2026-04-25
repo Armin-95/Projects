@@ -3,11 +3,13 @@ import yfinance as yf
 from collections import OrderedDict
 import joblib
 import os
+from pathlib import Path
 import pandas as pd  
 import numpy as np
 from database.db import  get_model_metrics, get_prediction_daily_bars
 from ml_pipeline.market_data import sync_prediction_daily_data
-from ml_pipeline.features import build_features
+from ml_pipeline.features import build_features, get_feature_column
+
 
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
@@ -22,8 +24,8 @@ COMPANY_NAMES = {
 }
 
 # Load ML model once at startup
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODELS_DIR = os.getenv("MODELS_DIR", os.path.join(BASE_DIR, "models"))
+BASE_DIR = Path(__file__).resolve().parent
+MODELS_DIR = Path(os.getenv("MODELS_DIR", BASE_DIR / "models"))
 
 # Load every .joblib in MODELS_DIR once at startup
 MODELS = {}
@@ -114,8 +116,9 @@ def predict():
     # get data from DB after is up to date, then do feature engineering and model prediction
     df = get_prediction_daily_bars(symbol)
     
-    #features for prediction
-    df_features, feature_cols = build_features(df,symbol)
+    #df_features, feature_cols = build_features(df,symbol)
+    df_features = build_features(df,symbol)
+
 
     ## model select and model prediction
 
@@ -128,11 +131,14 @@ def predict():
     if not models_for_symbol:
         return f"No models for {symbol}. Available tickers: {list(MODELS.keys())}", 400
 
-    X_pred_data = df_features[feature_cols].tail(1)
+    #X_pred_data = df_features[feature_cols].tail(1)
     results = {}
     model_metrics = {}
 
     for model_type, model in models_for_symbol.items():
+
+        feature_cols = get_feature_column(model_type) #feature column for trained model
+        X_pred_data = df_features[feature_cols].tail(1)
         predict_ret = float(model.predict(X_pred_data)[0])
         predict_close = float(prices[-1]* np.exp(predict_ret))
 

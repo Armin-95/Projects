@@ -36,14 +36,14 @@
           Predicted Next Return: <span style="font-family: 'Roboto Mono', monospace;">{{ (results["xgboost"][0]*100)|round(4) }}%</span>
         </div>  
       </div>
-      <canvas id="predict-chart" width="500" height="300"></canvas>
+      <canvas id="predict-chart-xgboost" width="500" height="300"></canvas>
       <div style="display:flex; gap:12px; margin-top:32px; flex-wrap:wrap; justify-content:center;">
-        <button id="read-model-btn" style="background:#82a4e7; color:#23293a; border:none; border-radius:3px; padding:10px 22px; font-size:0.8rem; font-weight:700; cursor:pointer;">Read about model</button>
-        <button id="metrics-btn" style="background:#00e676; color:#23293a; border:none; border-radius:3px; padding:10px 22px; font-size:0.8rem; font-weight:700; cursor:pointer;">Show model metrics</button>
+        <button id="read-model-btn-xgboost" style="background:#82a4e7; color:#23293a; border:none; border-radius:3px; padding:10px 22px; font-size:0.8rem; font-weight:700; cursor:pointer;">Read about model</button>
+        <button id="metrics-btn-xgboost" style="background:#00e676; color:#23293a; border:none; border-radius:3px; padding:10px 22px; font-size:0.8rem; font-weight:700; cursor:pointer;">Show model metrics</button>
       </div>
       
       <!-- Model Metrics Section (Hidden by default) -->
-      <div id="metrics-section" style="display:none; margin-top:24px; padding-top:24px; border-top:1px solid #3d4556; width:100%;">
+      <div id="metrics-section-xgboost" style="display:none; margin-top:24px; padding-top:24px; border-top:1px solid #3d4556; width:100%;">
         <!-- Model Quality Metrics -->
         <div style="margin-bottom:24px;">
           <h5 style="font-size:1.1rem; color:#00e676; margin-bottom:14px; text-transform:uppercase; letter-spacing:0.5px;">Model Metrics Quality</h5>
@@ -88,13 +88,82 @@
           </div>
         </div>
       </div>
+      
     </div>
+      <div class="stock-card-predict" style="width: 520px; min-height: 420px; background: #23293a; border-radius: 18px; box-shadow: 0 2px 12px rgba(0,0,0,0.18); display: flex; flex-direction: column; align-items: center; padding: 32px 24px;">
+        <h3 class="ml-model" style="font-size:2rem;">Machine Learning model</h3>
+        <h4 style="font-size:1.3rem;">Ridge (Ridge regression)</h4>
+      <div style="margin: 18px 0;">
+        <div style="font-size:1rem; color:#00e676; margin-bottom:14px;text-align:center;">
+          Last Close: <span style="font-family: 'Roboto Mono', monospace;">${{ prices[-1]|round(4) }}  Date:{{times[-1] }}</span>
+        </div>
+        <div style="font-size:1.2rem; color:#b6f6fc;">
+          Predicted Next Close: <span style="font-family: 'Roboto Mono', monospace;">${{ results["ridge"][1]|round(4)}}</span>
+        </div>
+        <div style="font-size:1.1rem; color:#b6f6fc; text-align:center;">
+          Predicted Next Return: <span style="font-family: 'Roboto Mono', monospace;">{{ (results["ridge"][0]*100)|round(4) }}%</span>
+        </div>  
+      </div>
+      <canvas id="predict-chart-ridge" width="500" height="300"></canvas>
+      <div style="display:flex; gap:12px; margin-top:32px; flex-wrap:wrap; justify-content:center;">
+        <button id="read-model-btn-ridge" style="background:#82a4e7; color:#23293a; border:none; border-radius:3px; padding:10px 22px; font-size:0.8rem; font-weight:700; cursor:pointer;">Read about model</button>
+        <button id="metrics-btn-ridge" style="background:#00e676; color:#23293a; border:none; border-radius:3px; padding:10px 22px; font-size:0.8rem; font-weight:700; cursor:pointer;">Show model metrics</button>
+      </div>
+      
+      <!-- Model Metrics Section (Hidden by default) -->
+      <div id="metrics-section-ridge" style="display:none; margin-top:24px; padding-top:24px; border-top:1px solid #3d4556; width:100%;">
+        <!-- Model Quality Metrics -->
+        <div style="margin-bottom:24px;">
+          <h5 style="font-size:1.1rem; color:#00e676; margin-bottom:14px; text-transform:uppercase; letter-spacing:0.5px;">Model Metrics Quality</h5>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:0.95rem; color:#b6f6fc;">
+            <div style="padding:8px; background:rgba(0,230,118,0.08); border-radius:4px;">
+              <span style="color:#a0a0b0;">MAE:</span> <span style="font-family:'Roboto Mono',monospace; font-weight:600;">{% if model_metrics and model_metrics.get("ridge") %}{{ (model_metrics["ridge"]["model_metrics_quality"]["mae"]|float)|round(6) }}{% else %}N/A{% endif %}</span>
+            </div>
+            <div style="padding:8px; background:rgba(0,230,118,0.08); border-radius:4px;">
+              <span style="color:#a0a0b0;">RMSE:</span> <span style="font-family:'Roboto Mono',monospace; font-weight:600;">{% if model_metrics and model_metrics.get("ridge") %}{{ (model_metrics["ridge"]["model_metrics_quality"]["rmse"]|float)|round(6) }}{% else %}N/A{% endif %}</span>
+            </div>
+            <div style="padding:8px; background:rgba(0,230,118,0.08); border-radius:4px;">
+              <span style="color:#a0a0b0;">Hit Ratio:</span> <span style="font-family:'Roboto Mono',monospace; font-weight:600;">{% if model_metrics and model_metrics.get("ridge") %}{{ (model_metrics["ridge"]["model_metrics_quality"]["hit_ratio"]|float)|round(4) }}{% else %}N/A{% endif %}</span>
+            </div>
+            <div style="padding:8px; background:rgba(0,230,118,0.08); border-radius:4px;">
+              <span style="color:#a0a0b0;">Correlation:</span> <span style="font-family:'Roboto Mono',monospace; font-weight:600;">{% if model_metrics and model_metrics.get("ridge") %}{{ (model_metrics["ridge"]["model_metrics_quality"]["corrcoef"]|float)|round(4) }}{% else %}N/A{% endif %}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Strategy Quality Metrics -->
+        <div>
+          <h5 style="font-size:1.1rem; color:#2de7f7; margin-bottom:14px; text-transform:uppercase; letter-spacing:0.5px;">Model Strategy Quality</h5>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:0.95rem; color:#b6f6fc;">
+            <div style="padding:8px; background:rgba(45,231,247,0.08); border-radius:4px;">
+              <span style="color:#a0a0b0;">Strategy Mean:</span> <span style="font-family:'Roboto Mono',monospace; font-weight:600;">{% if model_metrics and model_metrics.get("ridge") %}{{ (model_metrics["ridge"]["model_strategy_quality"]["strategy_mean"]|float)|round(6) }}{% else %}N/A{% endif %}</span>
+            </div>
+            <div style="padding:8px; background:rgba(45,231,247,0.08); border-radius:4px;">
+              <span style="color:#a0a0b0;">Strategy Std:</span> <span style="font-family:'Roboto Mono',monospace; font-weight:600;">{% if model_metrics and model_metrics.get("ridge") %}{{ (model_metrics["ridge"]["model_strategy_quality"]["strategy_std"]|float)|round(6) }}{% else %}N/A{% endif %}</span>
+            </div>
+            <div style="padding:8px; background:rgba(45,231,247,0.08); border-radius:4px;">
+              <span style="color:#a0a0b0;">Sharpe Ratio:</span> <span style="font-family:'Roboto Mono',monospace; font-weight:600;">{% if model_metrics and model_metrics.get("ridge") and model_metrics["ridge"]["model_strategy_quality"]["sharpe"] %}{{ (model_metrics["ridge"]["model_strategy_quality"]["sharpe"]|float)|round(4) }}{% else %}N/A{% endif %}</span>
+            </div>
+            <div style="padding:8px; background:rgba(45,231,247,0.08); border-radius:4px;">
+              <span style="color:#a0a0b0;">Total Return:</span> <span style="font-family:'Roboto Mono',monospace; font-weight:600;">{% if model_metrics and model_metrics.get("ridge") %}{{ (model_metrics["ridge"]["model_strategy_quality"]["total_return"]|float * 100)|round(2) }}%{% else %}N/A{% endif %}</span>
+            </div>
+            <div style="padding:8px; background:rgba(45,231,247,0.08); border-radius:4px;">
+              <span style="color:#a0a0b0;">Max Loss:</span> <span style="font-family:'Roboto Mono',monospace; font-weight:600;">{% if model_metrics and model_metrics.get("ridge") %}{{ (model_metrics["ridge"]["model_strategy_quality"]["max_loss"]|float * 100)|round(2) }}%{% else %}N/A{% endif %}</span>
+            </div>
+            <div style="padding:8px; background:rgba(45,231,247,0.08); border-radius:4px;">
+              <span style="color:#a0a0b0;">Max Drawdown:</span> <span style="font-family:'Roboto Mono',monospace; font-weight:600;">{% if model_metrics and model_metrics.get("ridge") %}{{ (model_metrics["ridge"]["model_strategy_quality"]["max_drawdown"]|float * 100)|round(2) }}%{% else %}N/A{% endif %}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
-  <!-- Popup Modal -->
-  <div id="model-modal" style="display:none; position:fixed; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.45); z-index:1000; align-items:center; justify-content:center;">
+  <!-- Popup Modal for XGBoost -->
+  <div id="model-modal-xgboost" style="display:none; position:fixed; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.45); z-index:1000; align-items:center; justify-content:center;">
     <div style="background:#23293a; color:#e0e6ed; max-width:500px; padding:32px 28px; border-radius:16px; box-shadow:0 4px 32px rgba(0,0,0,0.25); position:relative;">
-      <span id="close-modal" style="position:absolute; right:18px; top:14px; font-size:1.7rem; cursor:pointer;">&times;</span>
+      <span id="close-modal-xgboost" style="position:absolute; right:18px; top:14px; font-size:1.7rem; cursor:pointer;">&times;</span>
       <h4 style="font-size:1.6rem;margin-bottom:18px;">About XGBoost</h4>
       <p style="font-size:1rem; line-height:1.6;">
         XGBoost (Extreme Gradient Boosting) is a machine learning algorithm based on decision trees, built in a way that each new tree learns from the mistakes of the previous ones. It works by combining many weak learners (small trees) into a strong model that can capture complex patterns in data. The algorithm assigns higher weight to errors from earlier trees so that the next trees focus on correcting them, gradually improving accuracy. It also uses gradient descent to optimize predictions efficiently, making the learning process both fast and precise. XGBoost is fast, handles missing values well, and has built-in regularization to prevent overfitting. For stock prediction, it’s useful because it can process large amounts of historical data, pick up non-linear relationships, and make accurate predictions. Even with market complexity, XGBoost can still provide helpful signals. These signals come from patterns it detects in historical data.
@@ -106,35 +175,50 @@
     </div>
   </div>
 
+  <!-- Popup Modal for Ridge -->
+  <div id="model-modal-ridge" style="display:none; position:fixed; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.45); z-index:1000; align-items:center; justify-content:center;">
+    <div style="background:#23293a; color:#e0e6ed; max-width:500px; padding:32px 28px; border-radius:16px; box-shadow:0 4px 32px rgba(0,0,0,0.25); position:relative;">
+      <span id="close-modal-ridge" style="position:absolute; right:18px; top:14px; font-size:1.7rem; cursor:pointer;">&times;</span>
+      <h4 style="font-size:1.6rem;margin-bottom:18px;">About Ridge Regression</h4>
+      <p style="font-size:1rem; line-height:1.6;">
+        Ridge Regression is a linear machine learning model that predicts outcomes by finding a weighted combination of input features. It works similarly to standard linear regression but adds a penalty term (called regularization) to prevent the model from relying too heavily on any single feature. This helps reduce overfitting and improves generalization, especially when features are correlated or noisy. The model learns coefficients that balance fitting the data well while keeping weights small and stable. Ridge regression is fast, interpretable, and effective for capturing linear relationships in data. For stock prediction, it is useful because it provides stable and consistent estimates, helping to identify general trends even in noisy financial data.
+      </p>
+      <p style="margin-top:18px;">
+        For more details click here:
+        <a href="https://en.wikipedia.org/wiki/Ridge_regression" target="_blank" style="color:#00e676;">Wikipedia: Ridge Regression</a>
+      </p>
+    </div>
+  </div>
+
 <script>
   // Data coming from app.py
   const chartTimes = {{ times|tojson }};
   const chartPrices = {{ prices|tojson }};
 
   // Read predicted close from Jinja (XGBoost)
-  const predictedClose = {{ results["xgboost"][1]|round(4) }};
+  const predictedCloseXgboost = {{ results["xgboost"][1]|round(4) }};
 
   // Append a label for the prediction and the predicted price
   // (You can use 'Prediction' or pass a timestamp from Python if you prefer)
   const timesWithPred = [...chartTimes, 'Prediction'];
-  const pricesWithPred = [...chartPrices, predictedClose];
+  const pricesWithPredXgboost = [...chartPrices, predictedCloseXgboost];
 
   // Recompute last index AFTER adding prediction
-  const lastIdx = pricesWithPred.length - 1;
+  const lastIdx = pricesWithPredXgboost.length - 1;
   const symbol = '{{ symbol }}';
 
   // Style last point differently
-  const dataColors = pricesWithPred.map((_, i) => i === lastIdx ? '#ff1744' : '#00e676');
-  const pointRadius = pricesWithPred.map((_, i) => i === lastIdx ? 6 : 2);
+  const dataColors = pricesWithPredXgboost.map((_, i) => i === lastIdx ? '#ff1744' : '#00e676');
+  const pointRadius = pricesWithPredXgboost.map((_, i) => i === lastIdx ? 6 : 2);
 
-  const ctx = document.getElementById('predict-chart').getContext('2d');
-  new Chart(ctx, {
+  const ctxXgboost = document.getElementById('predict-chart-xgboost').getContext('2d');
+  new Chart(ctxXgboost, {
     type: 'line',
     data: {
       labels: timesWithPred,
       datasets: [{
         label: symbol,
-        data: pricesWithPred,
+        data: pricesWithPredXgboost,
         borderColor: '#00e676',
         backgroundColor: 'rgba(0,230,118,0.08)',
         borderWidth: 2.5,
@@ -147,7 +231,7 @@
         segment: {
           backgroundColor: ctx => {
             // Only fill blue between last close and prediction
-            if (ctx.p0DataIndex === pricesWithPred.length - 2 && ctx.p1DataIndex === pricesWithPred.length - 1) {
+            if (ctx.p0DataIndex === pricesWithPredXgboost.length - 2 && ctx.p1DataIndex === pricesWithPredXgboost.length - 1) {
               return 'rgba(45, 231, 247,0.3)'; // blue area
             }
             return 'rgba(0,230,118,0.08)'; // default green area
@@ -180,28 +264,109 @@
     }
   });
 
-    // Popup modal logic
-    document.getElementById('read-model-btn').onclick = function() {
-      document.getElementById('model-modal').style.display = 'flex';
+  // Chart for Ridge
+  const predictedCloseRidge = {{ results["ridge"][1]|round(4) }};
+  const pricesWithPredRidge = [...chartPrices, predictedCloseRidge];
+
+  const ctxRidge = document.getElementById('predict-chart-ridge').getContext('2d');
+  new Chart(ctxRidge, {
+    type: 'line',
+    data: {
+      labels: timesWithPred,
+      datasets: [{
+        label: symbol,
+        data: pricesWithPredRidge,
+        borderColor: '#00e676',
+        backgroundColor: 'rgba(0,230,118,0.08)',
+        borderWidth: 2.5,
+        fill: true,
+        tension: 0.25,
+        pointBackgroundColor: dataColors,
+        pointBorderColor: dataColors,
+        pointRadius: pointRadius,
+        pointHoverRadius: pointRadius,
+        segment: {
+          backgroundColor: ctx => {
+            // Only fill blue between last close and prediction
+            if (ctx.p0DataIndex === pricesWithPredRidge.length - 2 && ctx.p1DataIndex === pricesWithPredRidge.length - 1) {
+              return 'rgba(45, 231, 247,0.3)'; // blue area
+            }
+            return 'rgba(0,230,118,0.08)'; // default green area
+          }
+        }
+      }]
+    },
+    options: {
+      responsive: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              const idx = context.dataIndex;
+              const value = Number(context.parsed.y).toFixed(4);
+              if (idx === lastIdx) {
+                return `${symbol}:prediction = $ ${value}`;
+              } else {
+                return `${symbol}: $ ${value}`;
+              }
+            }
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: '#bdbdbd' }, grid: { color: '#23293a' } },
+        y: { ticks: { color: '#bdbdbd' }, grid: { color: '#23293a' } }
+      }
+    }
+  });
+
+    // Popup modal logic for XGBoost
+    document.getElementById('read-model-btn-xgboost').onclick = function() {
+      document.getElementById('model-modal-xgboost').style.display = 'flex';
     };
-    document.getElementById('close-modal').onclick = function() {
-      document.getElementById('model-modal').style.display = 'none';
+    document.getElementById('close-modal-xgboost').onclick = function() {
+      document.getElementById('model-modal-xgboost').style.display = 'none';
     };
     window.onclick = function(event) {
-      if (event.target == document.getElementById('model-modal')) {
-        document.getElementById('model-modal').style.display = 'none';
+      if (event.target == document.getElementById('model-modal-xgboost')) {
+        document.getElementById('model-modal-xgboost').style.display = 'none';
       }
     };
 
-    // Show/Hide model metrics section
-    const metricsBtn = document.getElementById('metrics-btn');
-    const metricsSection = document.getElementById('metrics-section');
-    let metricsVisible = false;
+    // Show/Hide model metrics section for XGBoost
+    const metricsBtnXgboost = document.getElementById('metrics-btn-xgboost');
+    const metricsSectionXgboost = document.getElementById('metrics-section-xgboost');
+    let metricsVisibleXgboost = false;
     
-    metricsBtn.onclick = function() {
-      metricsVisible = !metricsVisible;
-      metricsSection.style.display = metricsVisible ? 'block' : 'none';
-      metricsBtn.textContent = metricsVisible ? 'Hide model metrics' : 'Show model metrics';
+    metricsBtnXgboost.onclick = function() {
+      metricsVisibleXgboost = !metricsVisibleXgboost;
+      metricsSectionXgboost.style.display = metricsVisibleXgboost ? 'block' : 'none';
+      metricsBtnXgboost.textContent = metricsVisibleXgboost ? 'Hide model metrics' : 'Show model metrics';
+    };
+
+    // Popup modal logic for Ridge
+    document.getElementById('read-model-btn-ridge').onclick = function() {
+      document.getElementById('model-modal-ridge').style.display = 'flex';
+    };
+    document.getElementById('close-modal-ridge').onclick = function() {
+      document.getElementById('model-modal-ridge').style.display = 'none';
+    };
+    window.addEventListener('click', function(event) {
+      if (event.target == document.getElementById('model-modal-ridge')) {
+        document.getElementById('model-modal-ridge').style.display = 'none';
+      }
+    });
+
+    // Show/Hide model metrics section for Ridge
+    const metricsBtnRidge = document.getElementById('metrics-btn-ridge');
+    const metricsSectionRidge = document.getElementById('metrics-section-ridge');
+    let metricsVisibleRidge = false;
+    
+    metricsBtnRidge.onclick = function() {
+      metricsVisibleRidge = !metricsVisibleRidge;
+      metricsSectionRidge.style.display = metricsVisibleRidge ? 'block' : 'none';
+      metricsBtnRidge.textContent = metricsVisibleRidge ? 'Hide model metrics' : 'Show model metrics';
     };
   </script>
 

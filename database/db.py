@@ -1,4 +1,5 @@
 from datetime import timedelta
+import json
 import os
 import psycopg2
 from psycopg2.extras import execute_values
@@ -83,16 +84,20 @@ def init_db():
             symbol TEXT NOT NULL,
             model_type TEXT NOT NULL,
             time_of_training TIMESTAMPTZ DEFAULT NOW(),
-            mae DOUBLE PRECISION,
-            rmse DOUBLE PRECISION,
-            hit_ratio DOUBLE PRECISION,
-            corrcoef DOUBLE PRECISION,   
-            strategy_mean DOUBLE PRECISION,
-            strategy_std DOUBLE PRECISION,
-            sharpe DOUBLE PRECISION,
-            total_return DOUBLE PRECISION, 
-            max_loss DOUBLE PRECISION, 
-            max_drawdown DOUBLE PRECISION
+            ridge_coefficients JSONB,
+            ridge_best_alpha DOUBLE PRECISION,
+            xgboost_best_iteration INTEGER,
+            val_xgboost_rmse DOUBLE PRECISION,
+            test_mae DOUBLE PRECISION,
+            test_rmse DOUBLE PRECISION,
+            test_hit_ratio DOUBLE PRECISION,
+            test_corrcoef DOUBLE PRECISION,   
+            test_strategy_mean DOUBLE PRECISION,
+            test_strategy_std DOUBLE PRECISION,
+            test_sharpe DOUBLE PRECISION,
+            test_total_return DOUBLE PRECISION, 
+            test_max_loss DOUBLE PRECISION, 
+            test_max_drawdown DOUBLE PRECISION
         );
         """)
 
@@ -223,7 +228,9 @@ def upsert_stock_future_return_prediction(symbol: str, trading_date, predicted_r
 
 
 def insert_model_metrics(symbol, model_type, mae, rmse, hit_ratio, corrcoef,
-    strategy_mean, strategy_std,sharpe, total_return, max_loss, max_drawdown):
+    strategy_mean, strategy_std,sharpe, total_return, max_loss, max_drawdown,ridge_coefficients, ridge_best_alpha, xgboost_best_iteration, val_xgboost_rmse):
+    ridge_coefficients = json.dumps(ridge_coefficients) if not None else None
+    ridge_best_alpha = float(ridge_best_alpha) if ridge_best_alpha is not None else None
     mae = float(mae)
     rmse = float(rmse)
     hit_ratio = float(hit_ratio)
@@ -240,20 +247,24 @@ def insert_model_metrics(symbol, model_type, mae, rmse, hit_ratio, corrcoef,
                 INSERT INTO model_metrics (
                         symbol,
                         model_type,
-                        mae,
-                        rmse,
-                        hit_ratio,
-                        corrcoef,
-                        strategy_mean,
-                        strategy_std,
-                        sharpe,
-                        total_return,
-                        max_loss, 
-                        max_drawdown
+                        test_mae,
+                        test_rmse,
+                        test_hit_ratio,
+                        test_corrcoef,
+                        test_strategy_mean,
+                        test_strategy_std,
+                        test_sharpe,
+                        test_total_return,
+                        test_max_loss, 
+                        test_max_drawdown,
+                        ridge_coefficients,
+                        ridge_best_alpha,
+                        xgboost_best_iteration,
+                        val_xgboost_rmse
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, (symbol, model_type, mae, rmse, hit_ratio,
-                  corrcoef,strategy_mean, strategy_std, sharpe, total_return, max_loss, max_drawdown
+                  corrcoef,strategy_mean, strategy_std, sharpe, total_return, max_loss, max_drawdown,ridge_coefficients, ridge_best_alpha, xgboost_best_iteration, val_xgboost_rmse
             ))
 
             conn.commit()
@@ -283,9 +294,9 @@ def get_prediction_daily_bars(symbol:str):
 def get_model_metrics(symbol, model_type):
     with get_connection() as conn, conn.cursor() as cur:
             cur.execute( """
-                SELECT mae, rmse, hit_ratio, corrcoef,
-                       strategy_mean, strategy_std, sharpe,
-                       total_return, max_loss, max_drawdown
+                SELECT test_mae, test_rmse, test_hit_ratio, test_corrcoef,
+                       test_strategy_mean, test_strategy_std, test_sharpe,
+                       test_total_return, test_max_loss, test_max_drawdown
                 FROM model_metrics
                 WHERE symbol = %s AND model_type = %s
                 ORDER BY time_of_training DESC

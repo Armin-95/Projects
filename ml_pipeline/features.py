@@ -2,6 +2,16 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+FEATURES = {"xgboost":["ret1_log", "rsi14", "day_type", "sma5_20_ratio", "vol20", "range_pct", "vol_z"],
+            "ridge":["ret1_log", "rsi14","day_sin" ,"day_cos", "sma5_20_ratio", "vol20", "range_pct", "vol_z"]              
+            }
+
+
+def get_feature_column (model_name:str):
+    if model_name not in FEATURES:
+        raise ValueError(f"Unknown model_name='{model_name}'. Valid: {list(FEATURES)}")
+    return FEATURES[model_name]
+
 def _rsi(series: pd.Series, period: int = 14) -> pd.Series:
     delta = series.diff()
     gain = delta.clip(lower=0)
@@ -42,10 +52,11 @@ def build_features(df: pd.DataFrame,symbol):
 
     # calendar / day-of-week
     df["day_type"] = pd.to_datetime(df["trading_date"]).dt.weekday
+    df["day_sin"] = np.sin(2 * np.pi * df["day_type"] / 7) #updated for ridge linear 
+    df["day_cos"] = np.cos(2 * np.pi * df["day_type"] / 7) #updated for ridge linear 
 
     # target: next-day log return
     df["y_logret_next"] = np.log(df["close"].shift(-1) / df["close"])
 
-    feature_cols = ["ret1_log", "rsi14", "day_type", "sma5_20_ratio", "vol20", "range_pct", "vol_z"]
 
-    return df, feature_cols
+    return df

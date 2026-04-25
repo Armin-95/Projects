@@ -7,11 +7,11 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error
 import numpy as np
 
 from .data import get_prices, time_series_split
-from .features import build_features
-from .models import XGBModel, LSTMModel
+from .features import build_features, get_feature_column
+from .models import XGBModel,RidgeModel, LSTMModel
 from database.db import insert_model_metrics
 
-# Default artifacts folder = top-level "models/"
+# Default folder = top-level "models/"
 DEFAULT_OUTDIR = Path(__file__).resolve().parents[1] / "models"
 
 
@@ -22,16 +22,17 @@ def train_xgboost(
     val_frac: float = 0.15,
     test_frac: float = 0.15, 
     **model_params,
-) -> Dict[str, Any]:
+    ) -> Dict[str, Any]:
+    
     symbol = symbol.upper()
-
     print(f"[INFO] Downloading {symbol}")
     df = get_prices(symbol)
     if df.empty:
         raise ValueError(f"No data returned for symbol '{symbol}'.")
 
-    df_features, feature_cols = build_features(df, symbol)
+    df_features = build_features(df, symbol)
     df_features = df_features.dropna()
+    feature_cols = get_feature_column("xgboost")
 
     X = df_features[feature_cols]
     y = df_features["y_logret_next"]
@@ -56,6 +57,49 @@ def train_xgboost(
     }
 
 
+def train_ridge(
+    symbol: str,
+    outdir: Path,
+    val_frac: float = 0.0,
+    test_frac: float = 0.15, 
+    **model_params,
+    ) -> Dict[str, Any]:
+
+    symbol = symbol.upper()
+    print(f"[INFO] Downloading {symbol}")
+    df = get_prices(symbol)
+    if df.empty:
+        raise ValueError(f"No data returned for symbol '{symbol}'.")
+
+    df_features = build_features(df, symbol)
+    df_features = df_features.dropna()
+    feature_cols = get_feature_column("ridge")
+
+    X = df_features[feature_cols]
+    y = df_features["y_logret_next"]
+
+    X_tr, y_tr, _, _ , X_test, y_test = time_series_split(X, y, val_frac = 0.0, test_frac = 0.15)
+
+    model = RidgeModel(**model_params).fit(X_tr, y_tr)
+
+    _calculate_model_metrics(X_test, y_test, symbol, model, model_type= "ridge")
+
+    print(f"[INFO] Training Ridge (final params: best alpha ={model.model.named_steps['ridge'].alpha_})")
+    print(f"[INFO] Training Ridge (final params: coeficients ={model.model.named_steps['ridge'].coef_})")
+
+
+    outdir.mkdir(parents=True, exist_ok=True)
+    model_path = outdir / f"ridge_{symbol}.joblib"
+    model.save(str(model_path))
+
+    print(f"[SAVED] {model_path}")  
+    return {
+        "symbol": symbol,
+        "model": "ridge",
+        "model_path": str(model_path),
+    }
+
+
 def train_lstm(
     symbol: str,
     outdir: Path,
@@ -66,7 +110,7 @@ def train_lstm(
     raise NotImplementedError("LSTM training isn't implemented yet.")
 
 def _calculate_model_metrics(X_test, y_test,symbol, model, model_type):
-    ## model quality check on test set 
+    ## Test Metrics (model quality)
     #clarify the variable values 
     y_test_logret = y_test 
     y_test_pred_logret =model.predict(X_test)
@@ -95,9 +139,28 @@ def _calculate_model_metrics(X_test, y_test,symbol, model, model_type):
     drawdown = (cumulative_growth - running_max) / running_max
     max_drawdown = drawdown.min()
 
+    ##Validation Metrics + hyperparameters for XGBoost and Ridge (for DB insertion)
+    if model_type == "ridge":
+        feature_cols = get_feature_column("ridge")
+        coef = model.model.named_steps['ridge'].coef_.tolist()
+
+        if len (coef) != len(feature_cols):
+            raise ValueError(f"Number of coefficients ({len(coef)}) does not match number of features ({len(feature_cols)}).")
+        
+        ridge_coefficients =dict(zip(feature_cols, coef))
+        ridge_best_alpha = model.model.named_steps['ridge'].alpha_
+
+    else:
+        ridge_coefficients = None
+        ridge_best_alpha = None
+
+    xgboost_best_iteration = int(model.model.best_iteration) if model_type == "xgboost" else None
+    val_xgboost_rmse = float(model.model.best_score) if model_type == "xgboost" else None
+    #val_xgboost_rmse = float(0.7) if model_type == "xgboost" else None
+
     #inserting model metrics to DB
     insert_model_metrics(symbol, model_type, mae, rmse, hit_ratio, corrcoef, strategy_mean,
-                         strategy_std, sharpe, total_return, max_loss, max_drawdown)
+                         strategy_std, sharpe, total_return, max_loss, max_drawdown, ridge_coefficients, ridge_best_alpha, xgboost_best_iteration, val_xgboost_rmse)
 
 
 # -------- CLI (single run) --------
@@ -122,37 +185,30 @@ def _parse_kv_params(kvs: list[str]) -> Dict[str, Any]:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Train a single model run.")
     parser.add_argument("--symbol", required=True, help="Ticker (e.g., AAPL)")
-    parser.add_argument("--model", required=True, choices=["xgboost", "lstm"])
-    parser.add_argument(
-        "--outdir",
-        default=str(DEFAULT_OUTDIR),
-        help="Artifacts directory (default: top-level models/)",
-    )
-    parser.add_argument(
-        "--val_frac",
-        type=float,
-        default=0.2,
-        help="Validation fraction (0..1)",
-    )
-    parser.add_argument(
-        "--model_param",
-        action="append",
-        default=[],
-        help="Extra model params key=value (repeatable)",
-    )
+    parser.add_argument("--model", required=True, choices=["xgboost", "ridge"])
+    parser.add_argument("--outdir", default=str(DEFAULT_OUTDIR), help="Models directory (default: top-level models/)")
+    parser.add_argument("--val_frac",type=float, help="Validation fraction (0..1)")
+    parser.add_argument("--test_frac",type=float, help="Test fraction (0..1)")
+
+    parser.add_argument("--model_param", action="append", default=[], help="Extra model params key=value (repeatable)") #for example xgboost: --model_param learning_rate=0.01 ,ridge: --model_param alphas= [0.1, 0.5, 1.0]
     args = parser.parse_args()
 
-    if not 0 < args.val_frac < 1:
-        raise ValueError("--val_frac must be between 0 and 1")
+    if not (args.val_frac if args.val_frac else 0) + (args.test_frac if args.test_frac else 0) < 1:
+        raise ValueError("--val_frac + --test_frac must be between 0 and 1")
 
     outdir = Path(args.outdir)
     extras = _parse_kv_params(args.model_param)
 
     if args.model == "xgboost":
-        train_xgboost(args.symbol, outdir, args.val_frac, **extras)
-    else:
-        train_lstm(args.symbol, outdir, args.val_frac, **extras)
+        train_xgboost(args.symbol, outdir, **extras)
+    elif args.model == "ridge":
+        train_ridge(args.symbol, outdir, **extras)
+    elif args.model == "lstm":
+        raise NotImplementedError("LSTM training isn't implemented yet.")
 
 
 if __name__ == "__main__":
     main()
+
+
+
