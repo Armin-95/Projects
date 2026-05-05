@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import timedelta, timezone, datetime
 import json
 import os
 import psycopg2
@@ -27,7 +27,7 @@ def init_db():
     with get_connection() as conn, conn.cursor() as cur:
         # 1) Daily price storage
         cur.execute("""
-        CREATE TABLE IF NOT EXISTS stock_daily_bars_prediction (
+        CREATE TABLE IF NOT EXISTS prediction_daily_bars (
             symbol TEXT NOT NULL,
             trading_date DATE NOT NULL,
             open DOUBLE PRECISION,
@@ -68,12 +68,15 @@ def init_db():
 
         # Predict return of next close symbol (with time of the prediction)
         cur.execute("""
-        CREATE TABLE IF NOT EXISTS stock_future_return_predictions (
+        CREATE TABLE IF NOT EXISTS stock_future_predictions (
             symbol TEXT NOT NULL,
+            model_type TEXT NOT NULL,
             trading_date DATE NOT NULL,
+            close_date_time TIMESTAMPTZ NOT NULL,
             predicted_return DOUBLE PRECISION,
+            predicted_close DOUBLE PRECISION,
             time_of_prediction TIMESTAMPTZ DEFAULT NOW(),
-            PRIMARY KEY (symbol, trading_date)
+            PRIMARY KEY (symbol, model_type, trading_date)
         );
         """)
 
@@ -164,10 +167,10 @@ def get_latest_available_close_datetime(symbol: str, datetime_utc_now):
         return row if row else (None, None) 
 
 
-def get_latest_prediction_trading_date(symbol:str):
+def get_latest_stored_prediction_bar_date(symbol:str):
     with get_connection()as conn, conn.cursor() as cur:
         cur.execute(""" SELECT MAX(trading_date) 
-                    FROM stock_daily_bars_prediction 
+                    FROM prediction_daily_bars 
                     WHERE symbol = %s
                     """, (symbol,)) 
         row = cur.fetchone()
@@ -181,7 +184,7 @@ def upsert_prediction_daily_bars(df: pd.DataFrame, symbol:str, older_25_close_da
     rows = list(df.itertuples(index=False, name=None)) # converted to tuples for ex.: ('AAPL',datetime.date(2025, 12, 18),273.35420232069225,273.374203136776,266.7004552212896,271.935546875,51630700),...
     with get_connection() as conn, conn.cursor() as cur:
         execute_values(cur, """
-            INSERT INTO stock_daily_bars_prediction (
+            INSERT INTO prediction_daily_bars (
                 symbol,
                 trading_date,
                 open,
@@ -201,35 +204,44 @@ def upsert_prediction_daily_bars(df: pd.DataFrame, symbol:str, older_25_close_da
             """,rows)
 
         cur.execute("""
-            DELETE FROM stock_daily_bars_prediction
+            DELETE FROM prediction_daily_bars
             WHERE symbol = %s AND trading_date < %s
         """, (symbol, older_25_close_date))
         
         conn.commit()
 
 
-def upsert_stock_future_return_prediction(symbol: str, trading_date, predicted_return: float):
+def upsert_stock_future_prediction(symbol: str, model_type: str, trading_date, close_date_time, predicted_return: float, predicted_close: float | int):
+    predicted_return = float(predicted_return)
+    predicted_close = float(predicted_close)
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("""
-            INSERT INTO stock_future_return_predictions (
+            INSERT INTO stock_future_predictions (
                 symbol,
+                model_type,
                 trading_date,
-                predicted_return
+                close_date_time,
+                predicted_return,
+                predicted_close
             )
-            VALUES (%s, %s, %s)
-            ON CONFLICT (symbol, trading_date)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            ON CONFLICT (symbol, model_type, trading_date)
             DO UPDATE SET
-                predicted_return = EXCLUDED.predicted_return,
+                predicted_return  = EXCLUDED.predicted_return,
+                predicted_close   = EXCLUDED.predicted_close,
+                close_date_time   = EXCLUDED.close_date_time,
                 time_of_prediction = NOW()
-        """, (symbol, trading_date, predicted_return))
+        """, (symbol, model_type, trading_date, close_date_time, predicted_return, predicted_close))
 
         conn.commit()
 
 
 
+
+
 def insert_model_metrics(symbol, model_type, mae, rmse, hit_ratio, corrcoef,
     strategy_mean, strategy_std,sharpe, total_return, max_loss, max_drawdown,ridge_coefficients, ridge_best_alpha, xgboost_best_iteration, val_xgboost_rmse):
-    ridge_coefficients = json.dumps(ridge_coefficients) if not None else None
+    ridge_coefficients = json.dumps(ridge_coefficients) if ridge_coefficients is not None else None
     ridge_best_alpha = float(ridge_best_alpha) if ridge_best_alpha is not None else None
     mae = float(mae)
     rmse = float(rmse)
@@ -273,7 +285,7 @@ def insert_model_metrics(symbol, model_type, mae, rmse, hit_ratio, corrcoef,
 def get_prediction_daily_bars(symbol:str):
     with get_connection()as conn, conn.cursor() as cur:
         cur.execute(""" SELECT trading_date, open, high, low, close, volume
-                    FROM stock_daily_bars_prediction 
+                    FROM prediction_daily_bars 
                     WHERE symbol = %s
                     ORDER BY trading_date DESC
                     LIMIT 25
@@ -328,4 +340,57 @@ def get_model_metrics(symbol, model_type):
             
 
 
+
+def get_next_close_date(symbol: str):
+    datetime_utc_now = datetime.now(timezone.utc)
+    buffered_utc_now = datetime_utc_now - timedelta(minutes=10)  #safety 10min buffer for close time, it will be comapred to table market_calendar -> close_date_time 
+    with get_connection () as conn, conn.cursor() as cur:
+        cur.execute("""
+            SELECT mc.trading_date,
+                   mc.close_date_time
+            FROM market_calendar mc
+            JOIN stock_symbols ss
+              ON mc.calendar_code = ss.calendar_code
+            WHERE ss.symbol = %s
+              AND mc.close_date_time > %s
+            ORDER BY mc.close_date_time ASC
+            LIMIT 1
+            """,
+            (symbol, buffered_utc_now)
+        )
+        row = cur.fetchone()
+
+        if row is None:
+            return None, None
+
+        trading_date, close_date_time = row
+
+        if trading_date is None or close_date_time is None:
+            return None, None
+
+        return trading_date, close_date_time
+
+    
+
+
+def get_next_close_prediction(symbol: str, next_close_date, model_type):
+    with get_connection () as conn, conn.cursor() as cur:
+        cur.execute("""
+            SELECT predicted_return, predicted_close
+            FROM stock_future_predictions
+            WHERE symbol = %s AND trading_date = %s AND model_type= %s
+            """,
+            (symbol, next_close_date, model_type)
+        )
+        row  = cur.fetchone()
+
+        if not row:
+            return None, None
+
+        predicted_return, predicted_close = row
+
+        if predicted_return is None or predicted_close is None:
+            return None, None
+
+        return predicted_return, predicted_close
 

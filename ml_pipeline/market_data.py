@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 import pandas as pd
 import yfinance as yf
-from database.db import get_latest_available_close_datetime, get_latest_prediction_trading_date, upsert_prediction_daily_bars
+from database.db import get_latest_available_close_datetime, get_latest_stored_prediction_bar_date, upsert_prediction_daily_bars
 from database.populate_calendar import main as populate_calendar
 import logging
 
@@ -74,7 +74,7 @@ def sync_prediction_daily_data(symbol):
         if start_date is None or end_date is None:
             return False
 
-        last_stored_close_date = get_latest_prediction_trading_date(symbol)
+        last_stored_close_date = get_latest_stored_prediction_bar_date(symbol)
 
         if last_stored_close_date is None:
             raw_df = _download_daily_data(symbol, start_date, end_date)

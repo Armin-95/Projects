@@ -5,11 +5,10 @@ import joblib
 import os
 from pathlib import Path
 import pandas as pd  
-import numpy as np
 from database.db import  get_model_metrics, get_prediction_daily_bars
 from ml_pipeline.market_data import sync_prediction_daily_data
-from ml_pipeline.features import build_features, get_feature_column
-
+from ml_pipeline.features import build_features
+from services.prediction_service import get_or_create_next_close_predictions
 
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
@@ -28,13 +27,13 @@ BASE_DIR = Path(__file__).resolve().parent
 MODELS_DIR = Path(os.getenv("MODELS_DIR", BASE_DIR / "models"))
 
 # Load every .joblib in MODELS_DIR once at startup
-MODELS = {}
-for fname in os.listdir(MODELS_DIR):
+MODELS = {} 
+for fname in os.listdir(MODELS_DIR): 
     if fname.lower().endswith(".joblib") and "_" in fname:
         model_type, symbol = os.path.splitext(fname)[0].split("_", 1)
         symbol = symbol.upper()
         model_type = model_type.lower()
-        MODELS.setdefault(symbol, {})[model_type] = joblib.load(os.path.join(MODELS_DIR, fname))
+        MODELS.setdefault(symbol, {})[model_type] = joblib.load(os.path.join(MODELS_DIR, fname))   #Structure {"AAPL": {"xgboost": <loaded xgboost model object>,"ridge": <loaded ridge model object>},...
 if not MODELS:
     raise RuntimeError(f"No .joblib models found in {MODELS_DIR}")
 
@@ -116,11 +115,11 @@ def predict():
     # get data from DB after is up to date, then do feature engineering and model prediction
     df = get_prediction_daily_bars(symbol)
     
-    #df_features, feature_cols = build_features(df,symbol)
+    #all features for prediction for all models (xgboost, ridge...) 
     df_features = build_features(df,symbol)
 
 
-    ## model select and model prediction
+    ## Model select and model prediction
 
     #data for predict.html page
     prices = df_features['close'].ffill().values.tolist()
@@ -131,28 +130,18 @@ def predict():
     if not models_for_symbol:
         return f"No models for {symbol}. Available tickers: {list(MODELS.keys())}", 400
 
-    #X_pred_data = df_features[feature_cols].tail(1)
-    results = {}
-    model_metrics = {}
+    # create dict result (each model type for selected symbol) from db or create and insert values in db,  results= {"xgboost": predicted_return, predicted_close,...}
+    results = get_or_create_next_close_predictions(symbol, models_for_symbol, prices, df_features)
 
-    for model_type, model in models_for_symbol.items():
-
-        feature_cols = get_feature_column(model_type) #feature column for trained model
-        X_pred_data = df_features[feature_cols].tail(1)
-        predict_ret = float(model.predict(X_pred_data)[0])
-        predict_close = float(prices[-1]* np.exp(predict_ret))
-
-        results[model_type] = predict_ret, predict_close
-
-        #get metrics for the last trained model of this ticker and model type (xgboost, lstm...) from DB
-        model_metrics[model_type] = get_model_metrics(symbol, model_type) #structure {"xgboost": {"model_metrics_quality": {"mae": ..., "rmse": ..., "hit_ratio": ..., "corrcoef": ...}, "model_strategy_quality": {"strategy_mean": ..., "strategy_std": ..., "sharpe": ..., "total_return": ..., "max_loss": ..., "max_drawdown": ...}}}
+    #get metrics for the last trained model of this ticker and model type (xgboost, ridge, lstm...) from DB
+    model_metrics = {model_type: get_model_metrics(symbol, model_type) 
+                    for model_type in models_for_symbol}
+        #structure {"xgboost": {"model_metrics_quality": {"mae": ..., "rmse": ..., "hit_ratio": ..., "corrcoef": ...}, "model_strategy_quality": {"strategy_mean": ..., "strategy_std": ..., "sharpe": ..., "total_return": ..., "max_loss": ..., "max_drawdown": ...}}}
 
 
     # Append prediction
     prices_last_month = prices[-30:]  
     times_last_month = times[-30:]
-
-
 
     return render_template(
         'predict.html',
@@ -161,8 +150,7 @@ def predict():
         times=times_last_month,
         prices=prices_last_month,
         results=results,
-        model_metrics=model_metrics 
-
+        model_metrics=model_metrics
     )
 
 @app.route('/api/stock_data')
