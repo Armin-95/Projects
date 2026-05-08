@@ -33,7 +33,7 @@ def get_or_create_next_close_predictions(symbol: str, models_for_symbol: dict, p
         return {}
     
 
-    return results
+    return results, predict_return_trading_date
 
 
 

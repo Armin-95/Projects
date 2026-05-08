@@ -131,7 +131,7 @@ def predict():
         return f"No models for {symbol}. Available tickers: {list(MODELS.keys())}", 400
 
     # create dict result (each model type for selected symbol) from db or create and insert values in db,  results= {"xgboost": predicted_return, predicted_close,...}
-    results = get_or_create_next_close_predictions(symbol, models_for_symbol, prices, df_features)
+    results , predict_trading_date= get_or_create_next_close_predictions(symbol, models_for_symbol, prices, df_features)
 
     #get metrics for the last trained model of this ticker and model type (xgboost, ridge, lstm...) from DB
     model_metrics = {model_type: get_model_metrics(symbol, model_type) 
@@ -150,7 +150,8 @@ def predict():
         times=times_last_month,
         prices=prices_last_month,
         results=results,
-        model_metrics=model_metrics
+        model_metrics=model_metrics,
+        predict_trading_date=predict_trading_date
     )
 
 @app.route('/api/stock_data')

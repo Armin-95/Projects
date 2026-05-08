@@ -36,9 +36,12 @@
         <div style="font-size:1.2rem; color:#b6f6fc;">
           Predicted Next Close: <span style="font-family: 'Roboto Mono', monospace;">${{ results["xgboost"][1]|round(4)}}</span>
         </div>
-        <div style="font-size:1.1rem; color:#b6f6fc; text-align:center;">
+        <div style="font-size:1.2rem; color:#b6f6fc; text-align:center;">
           Predicted Next Return: <span style="font-family: 'Roboto Mono', monospace;">{{ (results["xgboost"][0]*100)|round(4) }}%</span>
-        </div>  
+        </div>
+        <div style="font-size:1rem; color:#b6f6fc; text-align:center;">
+          Target Trading Date: <span style="font-family: 'Roboto Mono', monospace;">{{ predict_trading_date }}</span>
+        </div>   
       </div>
       <canvas id="predict-chart-xgboost" width="500" height="300"></canvas>
       <div style="display:flex; gap:12px; margin-top:32px; flex-wrap:wrap; justify-content:center;">
@@ -104,9 +107,12 @@
         <div style="font-size:1.2rem; color:#b6f6fc;">
           Predicted Next Close: <span style="font-family: 'Roboto Mono', monospace;">${{ results["ridge"][1]|round(4)}}</span>
         </div>
-        <div style="font-size:1.1rem; color:#b6f6fc; text-align:center;">
+        <div style="font-size:1.2rem; color:#b6f6fc; text-align:center;">
           Predicted Next Return: <span style="font-family: 'Roboto Mono', monospace;">{{ (results["ridge"][0]*100)|round(4) }}%</span>
-        </div>  
+        </div>
+        <div style="font-size:1rem; color:#b6f6fc; text-align:center;">
+          Target Trading Date: <span style="font-family: 'Roboto Mono', monospace;">{{ predict_trading_date }}</span>
+        </div>   
       </div>
       <canvas id="predict-chart-ridge" width="500" height="300"></canvas>
       <div style="display:flex; gap:12px; margin-top:32px; flex-wrap:wrap; justify-content:center;">
