@@ -12,7 +12,11 @@
 </head>
 <body>
 
-  <h1>Stock Analysis Dashboard</h1>
+  <div class="dashboard-title-wrapper">
+    <h1 class="dashboard-title">
+      Stock Analysis Dashboard: <strong>{{ company_name }}</strong>
+    </h1>
+  </div>
 
   <form action="{{ url_for('analyze') }}" method="post">
     <label for="symbol">Analyze a Stock:</label>

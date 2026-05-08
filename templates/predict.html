@@ -8,7 +8,11 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <h1>Stock Analysis Dashboard: <strong>{{ company_name }}</strong></h1>
+  <div class="dashboard-title-wrapper">
+    <h1 class="dashboard-title">
+      Stock Analysis Dashboard: <strong>{{ company_name }}</strong>
+    </h1>
+  </div>
   <form action="{{ url_for('predict') }}" method="post">
     <label for="symbol">Select Stock:</label>
     <select id="symbol" name="symbol" required>
@@ -21,7 +25,7 @@
     </select>
     <button type="submit">Predict</button>
   </form>
-  <div class="stocks-grid" style="grid-template-columns: repeat(2, 1fr); gap: 40px; justify-items: center; max-width: 1200px; margin: 40px auto;">
+  <div class="stocks-grid" style="grid-template-columns: repeat(2, 1fr); gap: 40px; justify-items: center;max-width: 1200px; margin: 40px auto;">
     <div class="stock-card-predict" style="width: 520px; min-height: 420px; background: #23293a; border-radius: 18px; box-shadow: 0 2px 12px rgba(0,0,0,0.18); display: flex; flex-direction: column; align-items: center; padding: 32px 24px;">
       <h3 class="ml-model" style="font-size:2rem;">Machine Learning model</h3>
       <h4 style="font-size:1.3rem;">XGBoost (eXtreme Gradient Boosting)</h4>
@@ -160,6 +164,11 @@
 
   </div>
 
+  <div class="compare-action-bar">
+    <button id="compare-metrics-btn" class="compare-table-button">Compare models metrics quality</button>
+    <button id="features-btn" class="compare-table-button">Models training features</button>
+  </div>
+
   <!-- Popup Modal for XGBoost -->
   <div id="model-modal-xgboost" style="display:none; position:fixed; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.45); z-index:1000; align-items:center; justify-content:center;">
     <div style="background:#23293a; color:#e0e6ed; max-width:500px; padding:32px 28px; border-radius:16px; box-shadow:0 4px 32px rgba(0,0,0,0.25); position:relative;">
@@ -188,6 +197,151 @@
         <a href="https://en.wikipedia.org/wiki/Ridge_regression" target="_blank" style="color:#00e676;">Wikipedia: Ridge Regression</a>
       </p>
     </div>
+  </div>
+
+  <!-- Expandable Compare Metrics Section -->
+  <div id="compare-section" class="compare-expandable-section">
+    <h4>Compare models metrics quality</h4>
+    <p style="margin-bottom:18px; color:#b6f6fc; font-size:0.98rem;">See model and strategy quality side by side for all available models.</p>
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th>XGBoost</th>
+          <th>Ridge</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="compare-table-section-heading">
+          <td colspan="3">Model Metrics Quality</td>
+        </tr>
+        <tr>
+          <td class="compare-table-label">MAE</td>
+          <td class="compare-metric-value">{% if model_metrics and model_metrics.get("xgboost") %}{{ (model_metrics["xgboost"]["model_metrics_quality"]["mae"]|float)|round(6) }}{% else %}N/A{% endif %}</td>
+          <td class="compare-metric-value">{% if model_metrics and model_metrics.get("ridge") %}{{ (model_metrics["ridge"]["model_metrics_quality"]["mae"]|float)|round(6) }}{% else %}N/A{% endif %}</td>
+        </tr>
+        <tr>
+          <td class="compare-table-label">RMSE</td>
+          <td class="compare-metric-value">{% if model_metrics and model_metrics.get("xgboost") %}{{ (model_metrics["xgboost"]["model_metrics_quality"]["rmse"]|float)|round(6) }}{% else %}N/A{% endif %}</td>
+          <td class="compare-metric-value">{% if model_metrics and model_metrics.get("ridge") %}{{ (model_metrics["ridge"]["model_metrics_quality"]["rmse"]|float)|round(6) }}{% else %}N/A{% endif %}</td>
+        </tr>
+        <tr>
+          <td class="compare-table-label">Hit Ratio</td>
+          <td class="compare-metric-value">{% if model_metrics and model_metrics.get("xgboost") %}{{ (model_metrics["xgboost"]["model_metrics_quality"]["hit_ratio"]|float)|round(4) }}{% else %}N/A{% endif %}</td>
+          <td class="compare-metric-value">{% if model_metrics and model_metrics.get("ridge") %}{{ (model_metrics["ridge"]["model_metrics_quality"]["hit_ratio"]|float)|round(4) }}{% else %}N/A{% endif %}</td>
+        </tr>
+        <tr>
+          <td class="compare-table-label">Correlation</td>
+          <td class="compare-metric-value">{% if model_metrics and model_metrics.get("xgboost") %}{{ (model_metrics["xgboost"]["model_metrics_quality"]["corrcoef"]|float)|round(4) }}{% else %}N/A{% endif %}</td>
+          <td class="compare-metric-value">{% if model_metrics and model_metrics.get("ridge") %}{{ (model_metrics["ridge"]["model_metrics_quality"]["corrcoef"]|float)|round(4) }}{% else %}N/A{% endif %}</td>
+        </tr>
+        <tr class="compare-table-section-heading">
+          <td colspan="3">Model Strategy Quality</td>
+        </tr>
+        <tr>
+          <td class="compare-table-label">Strategy Mean</td>
+          <td class="compare-metric-value">{% if model_metrics and model_metrics.get("xgboost") %}{{ (model_metrics["xgboost"]["model_strategy_quality"]["strategy_mean"]|float)|round(6) }}{% else %}N/A{% endif %}</td>
+          <td class="compare-metric-value">{% if model_metrics and model_metrics.get("ridge") %}{{ (model_metrics["ridge"]["model_strategy_quality"]["strategy_mean"]|float)|round(6) }}{% else %}N/A{% endif %}</td>
+        </tr>
+        <tr>
+          <td class="compare-table-label">Strategy Std</td>
+          <td class="compare-metric-value">{% if model_metrics and model_metrics.get("xgboost") %}{{ (model_metrics["xgboost"]["model_strategy_quality"]["strategy_std"]|float)|round(6) }}{% else %}N/A{% endif %}</td>
+          <td class="compare-metric-value">{% if model_metrics and model_metrics.get("ridge") %}{{ (model_metrics["ridge"]["model_strategy_quality"]["strategy_std"]|float)|round(6) }}{% else %}N/A{% endif %}</td>
+        </tr>
+        <tr>
+          <td class="compare-table-label">Sharpe Ratio</td>
+          <td class="compare-metric-value">{% if model_metrics and model_metrics.get("xgboost") and model_metrics["xgboost"]["model_strategy_quality"]["sharpe"] %}{{ (model_metrics["xgboost"]["model_strategy_quality"]["sharpe"]|float)|round(4) }}{% else %}N/A{% endif %}</td>
+          <td class="compare-metric-value">{% if model_metrics and model_metrics.get("ridge") and model_metrics["ridge"]["model_strategy_quality"]["sharpe"] %}{{ (model_metrics["ridge"]["model_strategy_quality"]["sharpe"]|float)|round(4) }}{% else %}N/A{% endif %}</td>
+        </tr>
+        <tr>
+          <td class="compare-table-label">Total Return</td>
+          <td class="compare-metric-value">{% if model_metrics and model_metrics.get("xgboost") %}{{ (model_metrics["xgboost"]["model_strategy_quality"]["total_return"]|float * 100)|round(2) }}%{% else %}N/A{% endif %}</td>
+          <td class="compare-metric-value">{% if model_metrics and model_metrics.get("ridge") %}{{ (model_metrics["ridge"]["model_strategy_quality"]["total_return"]|float * 100)|round(2) }}%{% else %}N/A{% endif %}</td>
+        </tr>
+        <tr>
+          <td class="compare-table-label">Max Loss</td>
+          <td class="compare-metric-value">{% if model_metrics and model_metrics.get("xgboost") %}{{ (model_metrics["xgboost"]["model_strategy_quality"]["max_loss"]|float * 100)|round(2) }}%{% else %}N/A{% endif %}</td>
+          <td class="compare-metric-value">{% if model_metrics and model_metrics.get("ridge") %}{{ (model_metrics["ridge"]["model_strategy_quality"]["max_loss"]|float * 100)|round(2) }}%{% else %}N/A{% endif %}</td>
+        </tr>
+        <tr>
+          <td class="compare-table-label">Max Drawdown</td>
+          <td class="compare-metric-value">{% if model_metrics and model_metrics.get("xgboost") %}{{ (model_metrics["xgboost"]["model_strategy_quality"]["max_drawdown"]|float * 100)|round(2) }}%{% else %}N/A{% endif %}</td>
+          <td class="compare-metric-value">{% if model_metrics and model_metrics.get("ridge") %}{{ (model_metrics["ridge"]["model_strategy_quality"]["max_drawdown"]|float * 100)|round(2) }}%{% else %}N/A{% endif %}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Expandable Features Section -->
+  <div id="features-section" class="compare-expandable-section">
+    <h4>Models training features</h4>
+    <p style="margin-bottom:18px; color:#b6f6fc; font-size:0.98rem;">Features used to train each model, with explanations of their purpose in stock price prediction.</p>
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>Feature</th>
+          <th>XGBoost</th>
+          <th>Ridge</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="compare-table-label">ret1_log</td>
+          <td class="feature-used">✓</td>
+          <td class="feature-used">✓</td>
+          <td class="feature-description">1-day logarithmic return (log (today price / yesterday price)) of the stock price.</td>
+        </tr>
+        <tr>
+          <td class="compare-table-label">rsi14</td>
+          <td class="feature-used">✓</td>
+          <td class="feature-used">✓</td>
+          <td class="feature-description">Relative Strength Index (14-day), a momentum oscillator measuring price changes to evaluate overbought or oversold conditions.</td>
+        </tr>
+        <tr>
+          <td class="compare-table-label">day_type</td>
+          <td class="feature-used">✓</td>
+          <td class="feature-not-used">—</td>
+          <td class="feature-description">Categorical feature indicating the type of trading day, potentially affecting market behavior patterns.</td>
+        </tr>
+        <tr>
+          <td class="compare-table-label">day_sin</td>
+          <td class="feature-not-used">—</td>
+          <td class="feature-used">✓</td>
+          <td class="feature-description">Sine component of day-of-week cyclical encoding, capturing weekly seasonal patterns in stock prices.</td>
+        </tr>
+        <tr>
+          <td class="compare-table-label">day_cos</td>
+          <td class="feature-not-used">—</td>
+          <td class="feature-used">✓</td>
+          <td class="feature-description">Cosine component of day-of-week cyclical encoding, capturing weekly seasonal patterns in stock prices.</td>
+        </tr>
+        <tr>
+          <td class="compare-table-label">sma5_20_ratio</td>
+          <td class="feature-used">✓</td>
+          <td class="feature-used">✓</td>
+          <td class="feature-description">Ratio of 5-day to 20-day Simple Moving Averages minus 1, indicating short-term vs long-term trend momentum.</td>
+        </tr>
+        <tr>
+          <td class="compare-table-label">vol20</td>
+          <td class="feature-used">✓</td>
+          <td class="feature-used">✓</td>
+          <td class="feature-description">20-day volatility (standard deviation of daily returns), measuring price fluctuation risk over recent periods.</td>
+        </tr>
+        <tr>
+          <td class="compare-table-label">range_pct</td>
+          <td class="feature-used">✓</td>
+          <td class="feature-used">✓</td>
+          <td class="feature-description">Intraday price range as a percentage of closing price, showing daily volatility and market uncertainty.</td>
+        </tr>
+        <tr>
+          <td class="compare-table-label">vol_z</td>
+          <td class="feature-used">✓</td>
+          <td class="feature-used">✓</td>
+          <td class="feature-description">Volume z-score (standardized trading volume), indicating unusual volume activity relative to recent history.</td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 
 <script>
@@ -337,12 +491,25 @@
     // Show/Hide model metrics section for XGBoost
     const metricsBtnXgboost = document.getElementById('metrics-btn-xgboost');
     const metricsSectionXgboost = document.getElementById('metrics-section-xgboost');
-    let metricsVisibleXgboost = false;
+    const metricsBtnRidge = document.getElementById('metrics-btn-ridge');
+    const metricsSectionRidge = document.getElementById('metrics-section-ridge');
     
+    // Shared function to hide all model metrics
+    function hideAllModelMetrics() {
+      metricsSectionXgboost.style.display = 'none';
+      metricsBtnXgboost.textContent = 'Show model metrics';
+      metricsSectionRidge.style.display = 'none';
+      metricsBtnRidge.textContent = 'Show model metrics';
+    }
+
     metricsBtnXgboost.onclick = function() {
-      metricsVisibleXgboost = !metricsVisibleXgboost;
-      metricsSectionXgboost.style.display = metricsVisibleXgboost ? 'block' : 'none';
-      metricsBtnXgboost.textContent = metricsVisibleXgboost ? 'Hide model metrics' : 'Show model metrics';
+      const isOpening = metricsSectionXgboost.style.display !== 'block';
+      hideAllModelMetrics();
+      if (isOpening) {
+        metricsSectionXgboost.style.display = 'block';
+        metricsBtnXgboost.textContent = 'Hide model metrics';
+        metricsSectionXgboost.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     };
 
     // Popup modal logic for Ridge
@@ -352,26 +519,152 @@
     document.getElementById('close-modal-ridge').onclick = function() {
       document.getElementById('model-modal-ridge').style.display = 'none';
     };
+
+    // Compare models metrics button logic
+    const compareBtn = document.getElementById('compare-metrics-btn');
+    const compareSection = document.getElementById('compare-section');
+    let compareVisible = false;
+    
+    compareBtn.onclick = function() {
+      compareVisible = !compareVisible;
+      compareSection.style.display = compareVisible ? 'block' : 'none';
+      compareBtn.textContent = compareVisible ? 'Hide compare models metrics' : 'Compare models metrics quality';
+      if (compareVisible) {
+        highlightBestMetrics();
+        compareSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    };
+
+    // Function to highlight best metrics in comparison table
+    function highlightBestMetrics() {
+      const table = document.querySelector('.compare-table');
+      if (!table) return;
+      
+      const tbody = table.querySelector('tbody');
+      const rows = tbody.querySelectorAll('tr');
+      
+      // Define metrics rules: true = bigger is better, false = smaller is better
+      const metricRules = {
+        'MAE': false,
+        'RMSE': false,
+        'Hit Ratio': true,
+        'Correlation': true,
+        'Strategy Mean': true,
+        'Strategy Std': false,
+        'Sharpe Ratio': true,
+        'Total Return': true,
+        'Max Loss': false,
+        'Max Drawdown': false
+      };
+      
+      rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length < 3) return; // Skip header rows
+        
+        const metricLabel = cells[0].textContent.trim();
+        if (!metricRules.hasOwnProperty(metricLabel)) return;
+        
+        const biggerIsBetter = metricRules[metricLabel];
+        const values = [];
+        
+        // Parse values from cells 1 and 2 (skip label cell)
+        for (let i = 1; i < cells.length; i++) {
+          const cell = cells[i];
+          const text = cell.textContent.trim();
+          if (text === 'N/A') {
+            values.push(null);
+          } else {
+            // Remove % and parse as float
+            const cleanText = text.replace('%', '');
+            const num = parseFloat(cleanText);
+            values.push(isNaN(num) ? null : num);
+          }
+        }
+        
+        // Find best value and check for ties
+        let bestIndices = [];
+        let bestValue = biggerIsBetter ? -Infinity : Infinity;
+        
+        // First pass: find the best value
+        values.forEach((val, idx) => {
+          if (val !== null) {
+            if (biggerIsBetter && val > bestValue) {
+              bestValue = val;
+            } else if (!biggerIsBetter && val < bestValue) {
+              bestValue = val;
+            }
+          }
+        });
+        
+        // Second pass: collect all indices with best value
+        values.forEach((val, idx) => {
+          if (val === bestValue) {
+            bestIndices.push(idx);
+          }
+        });
+        
+        // Apply classes
+        for (let i = 1; i < cells.length; i++) {
+          const cell = cells[i];
+          cell.classList.remove('compare-metric-better', 'compare-metric-worse', 'compare-metric-neutral');
+          
+          if (values[i-1] === null) {
+            cell.classList.add('compare-metric-neutral');
+          } else if (bestIndices.length === 1 && bestIndices[0] === (i-1)) {
+            cell.classList.add('compare-metric-better');
+          } else if (bestIndices.length > 1 && bestIndices.includes(i-1)) {
+            cell.classList.add('compare-metric-neutral'); // tie
+          } else {
+            cell.classList.add('compare-metric-worse');
+          }
+        }
+      });
+    }
+
+    // Features button logic
+    const featuresBtn = document.getElementById('features-btn');
+    const featuresSection = document.getElementById('features-section');
+    let featuresVisible = false;
+    
+    featuresBtn.onclick = function() {
+      featuresVisible = !featuresVisible;
+      featuresSection.style.display = featuresVisible ? 'block' : 'none';
+      featuresBtn.textContent = featuresVisible ? 'Hide models training features' : 'Models training features';
+      if (featuresVisible) {
+        featuresSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    };
+
     window.addEventListener('click', function(event) {
+      if (event.target == document.getElementById('model-modal-xgboost')) {
+        document.getElementById('model-modal-xgboost').style.display = 'none';
+      }
       if (event.target == document.getElementById('model-modal-ridge')) {
         document.getElementById('model-modal-ridge').style.display = 'none';
       }
     });
 
+    document.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape') {
+        document.getElementById('model-modal-xgboost').style.display = 'none';
+        document.getElementById('model-modal-ridge').style.display = 'none';
+      }
+    });
+
     // Show/Hide model metrics section for Ridge
-    const metricsBtnRidge = document.getElementById('metrics-btn-ridge');
-    const metricsSectionRidge = document.getElementById('metrics-section-ridge');
-    let metricsVisibleRidge = false;
-    
     metricsBtnRidge.onclick = function() {
-      metricsVisibleRidge = !metricsVisibleRidge;
-      metricsSectionRidge.style.display = metricsVisibleRidge ? 'block' : 'none';
-      metricsBtnRidge.textContent = metricsVisibleRidge ? 'Hide model metrics' : 'Show model metrics';
+      const isOpening = metricsSectionRidge.style.display !== 'block';
+      hideAllModelMetrics();
+      if (isOpening) {
+        metricsSectionRidge.style.display = 'block';
+        metricsBtnRidge.textContent = 'Hide model metrics';
+        metricsSectionRidge.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     };
   </script>
 
   <p style="text-align:center; margin-top:40px">
-    <a href="{{ url_for('index') }}" style="color:rgb(119, 119, 146); text-decoration:none;">← Back to Main Page</a>
+    <a href="{{ url_for('index') }}" style="font-size:1.3rem; color:rgb(216, 216, 236); text-decoration:none;">← Back to Main Page</a>
   </p>
 </body>
 </html>
