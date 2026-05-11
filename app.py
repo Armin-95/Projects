@@ -9,7 +9,12 @@ from database.db import  get_model_metrics, get_prediction_daily_bars
 from ml_pipeline.market_data import sync_prediction_daily_data
 from ml_pipeline.features import build_features
 from services.prediction_service import get_or_create_next_close_predictions
+import logging
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s"
+    )
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 

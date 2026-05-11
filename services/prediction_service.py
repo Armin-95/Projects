@@ -13,7 +13,7 @@ def get_or_create_next_close_predictions(symbol: str, models_for_symbol: dict, p
 
         if predict_return_trading_date is None or predict_close_date_time is None:
             logger.error("No future trading_date or close_datetime found for prediction return for symbol %s", symbol)
-            return {}
+            return {}, None
 
         for model_type, model in models_for_symbol.items():
             predicted_return, predicted_close = get_next_close_prediction(symbol, predict_return_trading_date, model_type)
@@ -30,7 +30,7 @@ def get_or_create_next_close_predictions(symbol: str, models_for_symbol: dict, p
 
     except Exception:
         logger.exception("get_or_create_next_close_predictions failed for %s", symbol)
-        return {}
+        return {}, None
     
 
     return results, predict_return_trading_date

@@ -2,7 +2,7 @@ import sys
 from database.db import init_db, seed_symbols
 from experiments.run_experiments import main as run_experiments
 import logging
-logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def main():
     VALID_COMMANDS = {"init_db", "seed", "train"}
@@ -14,7 +14,7 @@ def main():
 
     if cmd == "init_db":
         init_db()
-        logging.info("DB initialized")
+        logger.info("DB initialized")
 
     elif cmd == "seed":
         seed_symbols([
@@ -25,11 +25,11 @@ def main():
             {"symbol": "TSLA", "calendar_code": "XNYS", "exchange_tz": "America/New_York"},
             {"symbol": "META", "calendar_code": "XNYS", "exchange_tz": "America/New_York"},
         ])
-        logging.info("Symbols seeded")
+        logger.info("Symbols seeded")
 
     elif cmd == "train":
         run_experiments()
-        logging.info("Experiments completed")
+        logger.info("Experiments completed")
 
 if __name__ == "__main__":
     main()

@@ -3,7 +3,7 @@ import exchange_calendars as ecals
 from datetime import date
 from database.db import init_db, upsert_calendar
 import logging
-logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def main():
     try:
@@ -24,10 +24,10 @@ def main():
                     )
 
         upsert_calendar(open_days)
-        logging.info(f"Inserted {len(open_days)} open days into market_calendar for {cal_code}")
+        logger.info(f"Inserted {len(open_days)} open days into market_calendar for {cal_code}")
 
     except Exception:
-        logging.exception("Failed to populate market calendar")
+        logger.exception("Failed to populate market calendar")
 
 if __name__ == "__main__":
     main()
