@@ -104,6 +104,20 @@ def init_db():
         );
         """)
 
+        # AI model comparison metrics explanations 
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS ai_model_comparison_explanations  (
+                    symbol TEXT NOT NULL,
+                    metric_hash TEXT NOT NULL,
+                    explanation TEXT NOT NULL,
+                    ai_provider TEXT,
+                    ai_model TEXT,
+                    response_id TEXT,
+                    created_at TIMESTAMPTZ DEFAULT NOW(),
+                    PRIMARY KEY (symbol, metric_hash)
+        );
+        """)
+
         conn.commit()
 
 
@@ -281,6 +295,44 @@ def insert_model_metrics(symbol, model_type, mae, rmse, hit_ratio, corrcoef,
 
             conn.commit()
 
+def insert_ai_model_comparison_explanation(symbol, metric_hash, explanation, ai_provider, ai_model, response_id):
+    with get_connection() as conn, conn.cursor() as cur:
+            cur.execute( """
+                INSERT INTO ai_model_comparison_explanations (
+                        symbol,
+                        metric_hash,
+                        explanation,
+                        ai_provider,
+                        ai_model,
+                        response_id
+                )
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ON CONFLICT (symbol, metric_hash) DO UPDATE SET
+                    explanation = EXCLUDED.explanation,
+                    response_id = EXCLUDED.response_id,
+                    ai_provider = EXCLUDED.ai_provider,
+                    ai_model = EXCLUDED.ai_model,
+                    created_at = NOW()
+            """, (symbol, metric_hash, explanation,ai_provider, ai_model, response_id))
+
+            conn.commit()
+
+def get_ai_model_comparison_explanation(symbol, metric_hash):
+    with get_connection() as conn, conn.cursor() as cur:
+            cur.execute( """
+                SELECT explanation, ai_model, ai_provider
+                FROM ai_model_comparison_explanations
+                WHERE symbol = %s AND metric_hash = %s
+                ORDER BY created_at DESC
+                LIMIT 1
+            """, (symbol, metric_hash))
+
+            row = cur.fetchone()
+
+            if not row or not row[0]:
+                return None
+
+            return row[0], row[1], row[2]
 
 def get_prediction_daily_bars(symbol:str):
     with get_connection()as conn, conn.cursor() as cur:
