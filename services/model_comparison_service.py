@@ -29,9 +29,9 @@ def get_or_create_ai_model_comparison_explanation(symbol: str, models: dict):
     model_metrics_for_ai = _filter_available_metrics(model_metrics)
 
     metric_hash = _create_metric_hash(model_metrics_for_ai)
-    model_comparison_explanation, ai_model, ai_provider = get_ai_model_comparison_explanation(symbol, metric_hash) #postgre Sql not getting a result 
+    comparison_result = get_ai_model_comparison_explanation(symbol, metric_hash) 
 
-    if model_comparison_explanation is None:
+    if comparison_result is None:
         ai_result = explain_model_comparison_gemini(symbol, model_metrics_for_ai)
         if ai_result is None:
             logger.error(f"Failed to get AI explanation from Gemini for {symbol}.")
@@ -44,5 +44,8 @@ def get_or_create_ai_model_comparison_explanation(symbol: str, models: dict):
 
         insert_ai_model_comparison_explanation(symbol, metric_hash, explanation, ai_provider, ai_model, response_id)
         model_comparison_explanation = explanation
+
+    else:
+        model_comparison_explanation, ai_model, ai_provider = comparison_result
 
     return model_comparison_explanation, ai_model, ai_provider
