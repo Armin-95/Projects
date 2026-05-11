@@ -173,6 +173,28 @@
   <div class="compare-action-bar">
     <button id="compare-metrics-btn" class="compare-table-button">Compare models metrics quality</button>
     <button id="features-btn" class="compare-table-button">Models training features</button>
+    <button id="ai-comparison-btn" class="ai-table-button">AI models comparison</button>
+  </div>
+
+  <!-- AI Model Comparison Section -->
+  <div id="ai-comparison-section" class="ai-comparison-section">
+    <div class="ai-comparison-header">
+      <span class="ai-badge">AI Insight</span>
+      <h4 class="ai-comparison-title">AI Model Comparison</h4>
+      <p class="ai-comparison-subtitle">
+        AI-generated summary comparing the available models based on prediction quality and strategy performance metrics.
+      </p>
+    </div>
+
+    <div class="ai-comparison-box">
+      <div id="ai-comparison-content" class="ai-comparison-content">
+        Click the button to load the AI comparison explanation.
+      </div>
+      <div style="margin-top:16px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.1); display:flex; justify-content:flex-end; gap:16px; font-size:0.85rem; color:#a0a0c0;">
+        <div><span style="color:#d0d0ff;">Model:</span> <span id="ai-response-model" style="font-family:'Roboto Mono',monospace;">—</span></div>
+        <div><span style="color:#d0d0ff;">Provider:</span> <span id="ai-response-provider" style="font-family:'Roboto Mono',monospace;">—</span></div>
+      </div>
+    </div>
   </div>
 
   <!-- Popup Modal for XGBoost -->
@@ -638,6 +660,66 @@
       featuresBtn.textContent = featuresVisible ? 'Hide models training features' : 'Models training features';
       if (featuresVisible) {
         featuresSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    };
+
+    // AI comparison button logic
+    const aiCompareBtn = document.getElementById('ai-comparison-btn');
+    const aiCompareSection = document.getElementById('ai-comparison-section');
+    const aiCompareContent = document.getElementById('ai-comparison-content');
+    let aiCompareVisible = false;
+    let aiComparisonLoaded = false;
+
+    function formatAiText(text) {
+      const safeText = text
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;');
+
+      return safeText
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n\n/g, '<br><br>')
+        .replace(/\n/g, '<br>');
+    }
+
+    async function loadAiModelComparison() {
+      aiCompareBtn.disabled = true;
+      aiCompareBtn.textContent = 'Loading AI comparison...';
+      try {
+        const response = await fetch(`/api/stocks/${symbol}/ai-model-comparison`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (!response.ok) {
+          const errorJson = await response.json().catch(() => null);
+          const message = errorJson && errorJson.error ? errorJson.error : `Failed to fetch AI comparison (${response.status})`;
+          aiCompareContent.textContent = message;
+          return;
+        }
+
+        const data = await response.json();
+        aiCompareContent.innerHTML = formatAiText(data.explanation || 'No explanation was returned.');
+        document.getElementById('ai-response-model').textContent = data.response_model || '—';
+        document.getElementById('ai-response-provider').textContent = data.response_provider || '—';
+        aiComparisonLoaded = true;
+      } catch (fetchError) {
+        aiCompareContent.textContent = `Unable to load AI comparison: ${fetchError.message}`;
+      } finally {
+        aiCompareBtn.disabled = false;
+        aiCompareBtn.textContent = aiCompareVisible ? 'Hide AI models comparison' : 'AI models comparison';
+      }
+    }
+
+    aiCompareBtn.onclick = function() {
+      aiCompareVisible = !aiCompareVisible;
+      aiCompareSection.style.display = aiCompareVisible ? 'block' : 'none';
+      aiCompareBtn.textContent = aiCompareVisible ? 'Hide AI models comparison' : 'AI models comparison';
+      if (aiCompareVisible) {
+        if (!aiComparisonLoaded) {
+          loadAiModelComparison();
+        }
+        aiCompareSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     };
 
