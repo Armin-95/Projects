@@ -12,16 +12,7 @@ joblib==1.5.1
 psycopg2==2.9.11
 exchange-calendars==4.13.2
 
-#flask>=3.0
-#gunicorn>=21.2          # production WSGI server
-#yfinance>=0.2.43        # Yahoo Finance API
-#pandas>=2.2.3
-#numpy>=1.26.4           # supports Python 3.12 on Render
-#scikit-learn>=1.4.2     # you use train/validation split + metrics
-#xgboost>=2.0.3
-#joblib>=1.4.2           # model save/load
-#psycopg2                #db SQL
-#exchange-calendars>=3.0.0  # for trading calendar support
+google-genai==2.0.1
 
 
 

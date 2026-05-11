@@ -5,9 +5,11 @@ import joblib
 import os
 from pathlib import Path
 import pandas as pd  
-from database.db import  get_model_metrics, get_prediction_daily_bars
+from database.db import get_prediction_daily_bars
 from ml_pipeline.market_data import sync_prediction_daily_data
 from ml_pipeline.features import build_features
+from services.model_comparison_service import get_or_create_ai_model_comparison_explanation
+from services.model_metrics_service import get_all_model_metrics_for_symbol
 from services.prediction_service import get_or_create_next_close_predictions
 import logging
 
@@ -138,15 +140,19 @@ def predict():
     # create dict result (each model type for selected symbol) from db or create and insert values in db,  results= {"xgboost": predicted_return, predicted_close,...}
     results , predict_trading_date= get_or_create_next_close_predictions(symbol, models_for_symbol, prices, df_features)
 
-    #get metrics for the last trained model of this ticker and model type (xgboost, ridge, lstm...) from DB
-    model_metrics = {model_type: get_model_metrics(symbol, model_type) 
-                    for model_type in models_for_symbol}
-        #structure {"xgboost": {"model_metrics_quality": {"mae": ..., "rmse": ..., "hit_ratio": ..., "corrcoef": ...}, "model_strategy_quality": {"strategy_mean": ..., "strategy_std": ..., "sharpe": ..., "total_return": ..., "max_loss": ..., "max_drawdown": ...}}}
+    if not results or not predict_trading_date:
+        logging.error(f"Failed to get predictions for {symbol}.")
 
+    #get metrics for the last trained model of this ticker and model type (xgboost, ridge, lstm...) from DB
+    model_metrics = get_all_model_metrics_for_symbol(symbol, MODELS)
+    #structure {"xgboost": {"model_metrics_quality": {"mae": ..., "rmse": ..., "hit_ratio": ..., "corrcoef": ...}, "model_strategy_quality": {"strategy_mean": ..., "strategy_std": ..., "sharpe": ..., "total_return": ..., "max_loss": ..., "max_drawdown": ...}}}
+    if not model_metrics:
+        logging.error(f"No model metrics found for {symbol}.")
 
     # Append prediction
     prices_last_month = prices[-30:]  
     times_last_month = times[-30:]
+
 
     return render_template(
         'predict.html',
@@ -158,6 +164,23 @@ def predict():
         model_metrics=model_metrics,
         predict_trading_date=predict_trading_date
     )
+
+@app.route("/api/stocks/<symbol>/ai-model-comparison", methods=["POST"])
+def ai_model_comparison(symbol):
+    symbol =symbol.upper()
+
+    ai_model_comparison_explanation, ai_model, ai_provider = get_or_create_ai_model_comparison_explanation(symbol, MODELS)
+    
+    if not ai_model_comparison_explanation:
+        return jsonify({"error": f"No AI model explanation found for {symbol}."}), 404
+    
+    return jsonify({
+        "symbol": symbol,
+        "explanation": ai_model_comparison_explanation,
+        "response_model": ai_model,
+        "response_provider": ai_provider
+    }) 
+
 
 @app.route('/api/stock_data')
 def stock_data():
