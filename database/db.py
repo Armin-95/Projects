@@ -2,7 +2,7 @@ from datetime import timedelta, timezone, datetime
 import json
 import os
 import psycopg2
-from psycopg2.extras import execute_values
+from psycopg2.extras import execute_values, Json
 import pandas as pd
 import numpy as np
 #from dotenv import load_dotenv #test env
@@ -73,8 +73,9 @@ def init_db():
             model_type TEXT NOT NULL,
             trading_date DATE NOT NULL,
             close_date_time TIMESTAMPTZ NOT NULL,
-            predicted_return DOUBLE PRECISION,
-            predicted_close DOUBLE PRECISION,
+            predicted_return DOUBLE PRECISION NOT NULL,
+            predicted_close DOUBLE PRECISION NOT NULL,
+            prediction_features JSONB NOT NULL,
             time_of_prediction TIMESTAMPTZ DEFAULT NOW(),
             PRIMARY KEY (symbol, model_type, trading_date)
         );
@@ -240,9 +241,11 @@ def upsert_prediction_daily_bars(df: pd.DataFrame, symbol:str, older_25_close_da
         conn.commit()
 
 
-def upsert_stock_future_prediction(symbol: str, model_type: str, trading_date, close_date_time, predicted_return: float, predicted_close: float | int):
+def upsert_stock_future_prediction(symbol: str, model_type: str, trading_date, close_date_time, predicted_return: float, predicted_close: float | int, prediction_features_dict: dict):
     predicted_return = float(predicted_return)
     predicted_close = float(predicted_close)
+    prediction_features = Json(prediction_features_dict)
+
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("""
             INSERT INTO stock_future_predictions (
@@ -251,16 +254,17 @@ def upsert_stock_future_prediction(symbol: str, model_type: str, trading_date, c
                 trading_date,
                 close_date_time,
                 predicted_return,
-                predicted_close
+                predicted_close,
+                prediction_features
             )
-            VALUES (%s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (symbol, model_type, trading_date)
             DO UPDATE SET
                 predicted_return  = EXCLUDED.predicted_return,
                 predicted_close   = EXCLUDED.predicted_close,
                 close_date_time   = EXCLUDED.close_date_time,
                 time_of_prediction = NOW()
-        """, (symbol, model_type, trading_date, close_date_time, predicted_return, predicted_close))
+        """, (symbol, model_type, trading_date, close_date_time, predicted_return, predicted_close, prediction_features))
 
         conn.commit()
 

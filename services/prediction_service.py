@@ -24,7 +24,9 @@ def get_or_create_next_close_predictions(symbol: str, models_for_symbol: dict, p
                 predicted_return = float(model.predict(X_pred_data)[0])
                 predicted_close = float(prices[-1]* np.exp(predicted_return))
 
-                upsert_stock_future_prediction(symbol, model_type, predict_return_trading_date, predict_close_date_time, predicted_return, predicted_close) #new
+                prediction_features_dict = X_pred_data.iloc[0].to_dict()
+
+                upsert_stock_future_prediction(symbol, model_type, predict_return_trading_date, predict_close_date_time, predicted_return, predicted_close, prediction_features_dict)
 
             results[model_type] = predicted_return, predicted_close
 

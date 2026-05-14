@@ -2,7 +2,7 @@ import hashlib
 import json
 import logging
 
-from database.db import get_ai_model_comparison_explanation, insert_ai_model_comparison_explanation
+from database.ai_db import get_ai_model_comparison_explanation, insert_ai_model_comparison_explanation
 from services.ai.model_comparison_ai import explain_model_comparison_gemini
 from services.model_metrics_service import _filter_available_metrics, get_all_model_metrics_for_symbol
 
