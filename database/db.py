@@ -118,6 +118,21 @@ def init_db():
         );
         """)
 
+                # AI prediction explainations 
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS ai_prediction_explanations  (
+                    symbol TEXT NOT NULL,
+                    prediction_date DATE NOT NULL,
+                    prediction_hash TEXT NOT NULL,
+                    explanation TEXT NOT NULL,
+                    ai_provider TEXT,
+                    ai_model TEXT,
+                    response_id TEXT,
+                    created_at TIMESTAMPTZ DEFAULT NOW(),
+                    PRIMARY KEY (symbol, prediction_date)
+        );
+        """)
+
         conn.commit()
 
 
